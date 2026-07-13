@@ -138,6 +138,7 @@ function waypointsMiddleware(req, res, next) {
 }
 
 export default defineConfig({
+  base: '/mc-waypoints/',
   define: {
     __GIT_HASH__: JSON.stringify(gitHash)
   },
