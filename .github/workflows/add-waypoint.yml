@@ -9,18 +9,18 @@ permissions:
   issues: write
 
 jobs:
-  process-waypoint:
-    # 仅在 ci:add_waypoint 标签被添加时运行，且只运行一次
+  # ============================================================
+  # 阶段 1：校验（ci:add_waypoint 触发）
+  # ============================================================
+  validate:
     if: >
       github.event.label.name == 'ci:add_waypoint' &&
       !contains(github.event.issue.labels.*.name, 'ci:processed') &&
-      !contains(github.event.issue.labels.*.name, 'ci:invalid')
+      !contains(github.event.issue.labels.*.name, 'ci:invalid') &&
+      !contains(github.event.issue.labels.*.name, 'ci:pending')
     runs-on: ubuntu-latest
 
     steps:
-      - name: 检出仓库
-        uses: actions/checkout@v4
-
       - name: 解析 Issue 表单并校验
         id: parse
         env:
@@ -28,7 +28,6 @@ jobs:
         run: |
           set -e
 
-          # 解析 markdown 表单字段
           parse_field() {
             echo "$BODY" | sed -n "/### $1/,/### /p" | sed '1d;$d' | sed '/^$/d' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
           }
@@ -42,19 +41,15 @@ jobs:
           echo "coords=$COORDS" >> $GITHUB_OUTPUT
           echo "note=$NOTE" >> $GITHUB_OUTPUT
 
-          # 解析维度（格式: "主世界 (overworld)" → "overworld"）
           DIMENSION=$(echo "$DIMENSION_RAW" | grep -oP '(?<=\().*(?=\))' || echo "$DIMENSION_RAW")
           echo "dimension=$DIMENSION" >> $GITHUB_OUTPUT
 
-          # === 校验 ===
           ERRORS=""
 
-          # 名称
           if [ -z "$NAME" ]; then
             ERRORS="$ERRORS\n- ❌ 名称为空"
           fi
 
-          # 坐标
           COORDS_CLEAN=$(echo "$COORDS" | tr ',' ' ')
           COORD_COUNT=$(echo "$COORDS_CLEAN" | wc -w)
           if [ "$COORD_COUNT" -ne 3 ]; then
@@ -69,82 +64,48 @@ jobs:
             echo "x=$X" >> $GITHUB_OUTPUT
             echo "y=$Y" >> $GITHUB_OUTPUT
             echo "z=$Z" >> $GITHUB_OUTPUT
-            # 检测混用
             HAS_COMMA=$(echo "$COORDS" | grep -c ',' || true)
             HAS_SPACE=$(echo "$COORDS" | grep -c '[[:space:]]' || true)
-            if [ "$HAS_COMMA" -gt 0 ] && [ "$HAS_SPACE" -gt 0 ] && ! echo "$COORDS" | grep -qE '^-?[0-9]+, -?[0-9]+, -?[0-9]+$'; then
-              # 检查是否逗号后的空格模式（合法）
+            if [ "$HAS_COMMA" -gt 0 ] && [ "$HAS_SPACE" -gt 0 ]; then
               if ! echo "$COORDS" | grep -qE '^-?[0-9]+, *-?[0-9]+, *-?[0-9]+$'; then
                 ERRORS="$ERRORS\n- ❌ 坐标分隔符混用，请用纯空格或纯英文逗号"
               fi
             fi
           fi
 
-          # 维度
           case "$DIMENSION" in
             overworld|nether|end) ;;
             *) ERRORS="$ERRORS\n- ❌ 维度无效: '$DIMENSION'（应为 overworld / nether / end）" ;;
           esac
 
-          # === 查重 ===
-          if [ -f public/data/waypoints.jsonl ]; then
-            if grep -q "\"name\":\"$NAME\"" public/data/waypoints.jsonl && grep "\"name\":\"$NAME\"" public/data/waypoints.jsonl | grep -q "\"dimension\":\"$DIMENSION\""; then
-              ERRORS="$ERRORS\n- ❌ 坐标「$NAME」在维度「$DIMENSION」已存在"
-            fi
-          fi
+          echo "errors<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$ERRORS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
           if [ -n "$ERRORS" ]; then
-            echo "校验失败:"
-            echo -e "$ERRORS"
-            echo "errors<<EOF" >> $GITHUB_OUTPUT
-            echo -e "$ERRORS" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
             echo "valid=false" >> $GITHUB_OUTPUT
           else
             echo "valid=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: 追加坐标数据
-        if: steps.parse.outputs.valid == 'true'
-        run: |
-          CONTRIBUTOR="${{ github.event.issue.user.login }}"
-          ID="ci-$(date +%s)-${{ github.event.issue.number }}"
-          CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
-          NEW_LINE=$(jq -n \
-            --arg id "$ID" \
-            --arg name "${{ steps.parse.outputs.name }}" \
-            --argjson x "${{ steps.parse.outputs.x }}" \
-            --argjson y "${{ steps.parse.outputs.y }}" \
-            --argjson z "${{ steps.parse.outputs.z }}" \
-            --arg dimension "${{ steps.parse.outputs.dimension }}" \
-            --arg category "" \
-            --arg note "${{ steps.parse.outputs.note }}" \
-            --arg contributor "$CONTRIBUTOR" \
-            --arg createdAt "$CREATED_AT" \
-            '{id: $id, name: $name, x: $x, y: $y, z: $z, dimension: $dimension, category: $category, note: $note, contributor: $contributor, createdAt: $createdAt}' | \
-            jq -c '.')
-
-          echo "$NEW_LINE" >> public/data/waypoints.jsonl
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f public/data/waypoints.jsonl
-          git commit -m "添加坐标: ${{ steps.parse.outputs.name }} (${{ steps.parse.outputs.x }}, ${{ steps.parse.outputs.y }}, ${{ steps.parse.outputs.z }}) [${{ steps.parse.outputs.dimension }}]
-
-          Closes #${{ github.event.issue.number }}"
-          git push
-
-      - name: 评论结果
-        if: always()
+      - name: 校验失败 — 评论并标记
+        if: steps.parse.outputs.valid == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ISSUE="${{ github.event.issue.number }}"
-          REPO="${{ github.repository }}"
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "❌ **校验失败，请修正后重新提交：**
 
-          if [ "${{ steps.parse.outputs.valid }}" = "true" ]; then
-            gh issue comment "$ISSUE" --repo "$REPO" -b "✅ **坐标已添加**
+          ${{ steps.parse.outputs.errors }}"
+
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:invalid"
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --remove-label "ci:add_waypoint"
+
+      - name: 校验通过 — 标记等待审核
+        if: steps.parse.outputs.valid == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "✅ **校验通过，等待审核**
 
           | 字段 | 值 |
           |------|-----|
@@ -152,17 +113,99 @@ jobs:
           | 坐标 | ${{ steps.parse.outputs.x }} ${{ steps.parse.outputs.y }} ${{ steps.parse.outputs.z }} |
           | 维度 | ${{ steps.parse.outputs.dimension }} |
           | 备注 | ${{ steps.parse.outputs.note }} |
-          | 贡献者 | @${{ github.event.issue.user.login }} |
+          | 提交者 | @${{ github.event.issue.user.login }} |
 
-          数据已合入主分支 ✨"
+          > 请仓库维护者审核后添加 \`ci:approved\` 标签以完成写入。"
 
-            gh issue close "$ISSUE" --repo "$REPO"
-            gh issue edit "$ISSUE" --repo "$REPO" --add-label "ci:processed"
-          else
-            gh issue comment "$ISSUE" --repo "$REPO" -b "❌ **校验失败，请修正后重新提交：**
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:pending"
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --remove-label "ci:add_waypoint"
 
-          ${{ steps.parse.outputs.errors }}"
+  # ============================================================
+  # 阶段 2：写入（ci:approved 触发）
+  # ============================================================
+  commit:
+    if: >
+      github.event.label.name == 'ci:approved' &&
+      contains(github.event.issue.labels.*.name, 'ci:pending')
+    runs-on: ubuntu-latest
 
-            gh issue edit "$ISSUE" --repo "$REPO" --add-label "ci:invalid"
-            gh issue edit "$ISSUE" --repo "$REPO" --remove-label "ci:add_waypoint"
-          fi
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 解析并写入
+        id: write
+        env:
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          parse_field() {
+            echo "$BODY" | sed -n "/### $1/,/### /p" | sed '1d;$d' | sed '/^$/d' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+          }
+
+          NAME=$(parse_field "名称")
+          COORDS=$(parse_field "坐标")
+          DIMENSION_RAW=$(parse_field "维度")
+          NOTE=$(parse_field "备注" || true)
+          DIMENSION=$(echo "$DIMENSION_RAW" | grep -oP '(?<=\().*(?=\))' || echo "$DIMENSION_RAW")
+
+          COORDS_CLEAN=$(echo "$COORDS" | tr ',' ' ')
+          X=$(echo "$COORDS_CLEAN" | awk '{print $1}')
+          Y=$(echo "$COORDS_CLEAN" | awk '{print $2}')
+          Z=$(echo "$COORDS_CLEAN" | awk '{print $3}')
+
+          CONTRIBUTOR="${{ github.event.issue.user.login }}"
+          ID="ci-$(date +%s)-${{ github.event.issue.number }}"
+          CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          mkdir -p public/data
+          touch public/data/waypoints.jsonl
+
+          NEW_LINE=$(jq -n \
+            --arg id "$ID" \
+            --arg name "$NAME" \
+            --argjson x "$X" \
+            --argjson y "$Y" \
+            --argjson z "$Z" \
+            --arg dimension "$DIMENSION" \
+            --arg category "" \
+            --arg note "$NOTE" \
+            --arg contributor "$CONTRIBUTOR" \
+            --arg createdAt "$CREATED_AT" \
+            '{id: $id, name: $name, x: $x, y: $y, z: $z, dimension: $dimension, category: $category, note: $note, contributor: $contributor, createdAt: $createdAt}' | \
+            jq -c '.')
+
+          echo "$NEW_LINE" >> public/data/waypoints.jsonl
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+          echo "x=$X" >> $GITHUB_OUTPUT
+          echo "y=$Y" >> $GITHUB_OUTPUT
+          echo "z=$Z" >> $GITHUB_OUTPUT
+          echo "dimension=$DIMENSION" >> $GITHUB_OUTPUT
+          echo "note=$NOTE" >> $GITHUB_OUTPUT
+
+      - name: 提交并推送
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f public/data/waypoints.jsonl
+          git commit -m "添加坐标: ${{ steps.write.outputs.name }} (${{ steps.write.outputs.x }}, ${{ steps.write.outputs.y }}, ${{ steps.write.outputs.z }}) [${{ steps.write.outputs.dimension }}]
+
+          Closes #${{ github.event.issue.number }}"
+          git push
+
+      - name: 评论并关闭
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "✨ **坐标已写入主分支并部署**
+
+          | 字段 | 值 |
+          |------|-----|
+          | 名称 | ${{ steps.write.outputs.name }} |
+          | 坐标 | ${{ steps.write.outputs.x }} ${{ steps.write.outputs.y }} ${{ steps.write.outputs.z }} |
+          | 维度 | ${{ steps.write.outputs.dimension }} |
+          | 备注 | ${{ steps.write.outputs.note }} |
+          | 贡献者 | @${{ github.event.issue.user.login }} |"
+
+          gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}"
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --remove-label "ci:pending"
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:processed"
