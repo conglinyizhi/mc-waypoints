@@ -41,7 +41,7 @@ import { useDataFetch } from './composables/useDataFetch.js'
 const tabs = [
   { to: '/', label: '🗺️ 坐标点' },
   { to: '/submit', label: '➕ 提交' },
-  { to: '/server', label: '⚙️ 服务器' },
+  { to: '/server', label: '📋 待办' },
   { to: '/announcement', label: '📢 公告' },
   { to: '/converter', label: '🔢 下界换算' }
 ]

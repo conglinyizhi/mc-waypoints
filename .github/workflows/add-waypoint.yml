@@ -25,14 +25,6 @@ jobs:
       !contains(github.event.issue.labels.*.name, 'ci:invalid') &&
       !contains(github.event.issue.labels.*.name, 'ci:processed')
     runs-on: ubuntu-latest
-    outputs:
-      x: ${{ steps.parse.outputs.x }}
-      y: ${{ steps.parse.outputs.y }}
-      z: ${{ steps.parse.outputs.z }}
-      name: ${{ steps.parse.outputs.name }}
-      dimension: ${{ steps.parse.outputs.dimension }}
-      note: ${{ steps.parse.outputs.note }}
-      valid: ${{ steps.parse.outputs.valid }}
 
     steps:
       - name: 解析表单并校验
@@ -56,17 +48,15 @@ jobs:
           echo "coords=$COORDS" >> $GITHUB_OUTPUT
           echo "note=$NOTE" >> $GITHUB_OUTPUT
 
-          DIMENSION=$(echo "$DIMENSION_RAW" | grep -oP '(?<=\().*(?=\))' || echo "$DIMENSION_RAW")
+          DIMENSION=$(echo "$DIMENSION_RAW" | grep -oP '(?<=\().*(?=\\))' || echo "$DIMENSION_RAW")
           echo "dimension=$DIMENSION" >> $GITHUB_OUTPUT
 
-          # 检测调试开关
           if echo "$BODY" | grep -q '\- \[x\].*ci:try'; then
             echo "debug=true" >> $GITHUB_OUTPUT
           else
             echo "debug=false" >> $GITHUB_OUTPUT
           fi
 
-          # 判断是否维护者
           case "$AUTHOR_ASSOC" in
             OWNER|COLLABORATOR|MEMBER)
               echo "is_maintainer=true" >> $GITHUB_OUTPUT ;;
@@ -74,7 +64,6 @@ jobs:
               echo "is_maintainer=false" >> $GITHUB_OUTPUT ;;
           esac
 
-          # === 校验 ===
           ERRORS=""
 
           if [ -z "$NAME" ]; then
@@ -84,7 +73,7 @@ jobs:
           COORDS_CLEAN=$(echo "$COORDS" | tr ',' ' ')
           COORD_COUNT=$(echo "$COORDS_CLEAN" | wc -w)
           if [ "$COORD_COUNT" -ne 3 ]; then
-            ERRORS="$ERRORS\n- ❌ 坐标需要 X Y Z 三个数字（空格或逗号分隔），检测到 $COORD_COUNT 个"
+            ERRORS="$ERRORS\n- ❌ 坐标需要 X Y Z 三个数字，检测到 $COORD_COUNT 个"
           else
             X=$(echo "$COORDS_CLEAN" | awk '{print $1}')
             Y=$(echo "$COORDS_CLEAN" | awk '{print $2}')
@@ -119,6 +108,9 @@ jobs:
             echo "valid=true" >> $GITHUB_OUTPUT
           fi
 
+          # 生成记录 id
+          echo "record_id=ci-$(date +%s)-${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+
       # ---- 校验失败 ----
       - name: 校验失败
         if: steps.parse.outputs.valid == 'false'
@@ -129,24 +121,14 @@ jobs:
 
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:invalid"
 
-      # ---- 普通用户 / 维护者+ci:try：校验通过 → 等待审核 ----
+      # ---- 普通用户：校验通过 → 等待审核 ----
       - name: 等待审核
         if: >
           steps.parse.outputs.valid == 'true' &&
-          (
-            steps.parse.outputs.is_maintainer == 'false' ||
-            steps.parse.outputs.debug == 'true'
-          )
+          steps.parse.outputs.is_maintainer == 'false' &&
+          steps.parse.outputs.debug == 'false'
         run: |
-          LABELS="ci:pending"
-          if [ "${{ steps.parse.outputs.debug }}" = "true" ]; then
-            LABELS="$LABELS,ci:try"
-            MODE_MSG="🔬 **调试模式 (ci:try)** — 审核通过后仅模拟，不实际写入\n\n"
-          else
-            MODE_MSG=""
-          fi
-
-          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "${MODE_MSG}✅ **校验通过，等待审核**
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "✅ **校验通过，等待审核**
 
           | 字段 | 值 |
           |------|-----|
@@ -156,12 +138,12 @@ jobs:
           | 备注 | ${{ steps.parse.outputs.note }} |
           | 提交者 | @${{ github.event.issue.user.login }} |
 
-          > 请维护者回复 \`通过\` / \`ok\` 确认，或 \`不通过\` / \`fail\` 拒绝。"
+          > 请维护者回复 \`通过\` / \`ok\` 确认写入，或 \`不通过\` / \`fail\` 拒绝。"
 
-          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "$LABELS"
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:pending"
 
       # ---- 维护者 + 无调试：直接写入 ----
-      - name: 检出仓库
+      - name: 检出仓库 (直写)
         if: >
           steps.parse.outputs.valid == 'true' &&
           steps.parse.outputs.is_maintainer == 'true' &&
@@ -173,78 +155,195 @@ jobs:
           steps.parse.outputs.valid == 'true' &&
           steps.parse.outputs.is_maintainer == 'true' &&
           steps.parse.outputs.debug == 'false'
-        id: write
+        id: write_direct
         run: |
-          NAME="${{ steps.parse.outputs.name }}"
-          X="${{ steps.parse.outputs.x }}"
-          Y="${{ steps.parse.outputs.y }}"
-          Z="${{ steps.parse.outputs.z }}"
-          DIMENSION="${{ steps.parse.outputs.dimension }}"
-          NOTE="${{ steps.parse.outputs.note }}"
           CONTRIBUTOR="${{ github.event.issue.user.login }}"
-          ID="ci-$(date +%s)-${{ github.event.issue.number }}"
           CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
           mkdir -p public/data
           touch public/data/waypoints.jsonl
 
           NEW_LINE=$(jq -n \
-            --arg id "$ID" \
-            --arg name "$NAME" \
-            --argjson x "$X" \
-            --argjson y "$Y" \
-            --argjson z "$Z" \
-            --arg dimension "$DIMENSION" \
+            --arg id "${{ steps.parse.outputs.record_id }}" \
+            --arg name "${{ steps.parse.outputs.name }}" \
+            --argjson x "${{ steps.parse.outputs.x }}" \
+            --argjson y "${{ steps.parse.outputs.y }}" \
+            --argjson z "${{ steps.parse.outputs.z }}" \
+            --arg dimension "${{ steps.parse.outputs.dimension }}" \
             --arg category "" \
-            --arg note "$NOTE" \
+            --arg note "${{ steps.parse.outputs.note }}" \
             --arg contributor "$CONTRIBUTOR" \
             --arg createdAt "$CREATED_AT" \
-            '{id: $id, name: $name, x: $x, y: $y, z: $z, dimension: $dimension, category: $category, note: $note, contributor: $contributor, createdAt: $createdAt}' | \
-            jq -c '.')
+            '{id: $id, name: $name, x: $x, y: $y, z: $z, dimension: $dimension, category: $category, note: $note, contributor: $contributor, createdAt: $createdAt}' | jq -c '.')
 
           echo "$NEW_LINE" >> public/data/waypoints.jsonl
-          echo "name=$NAME" >> $GITHUB_OUTPUT
-          echo "x=$X" >> $GITHUB_OUTPUT
-          echo "y=$Y" >> $GITHUB_OUTPUT
-          echo "z=$Z" >> $GITHUB_OUTPUT
-          echo "dimension=$DIMENSION" >> $GITHUB_OUTPUT
-          echo "note=$NOTE" >> $GITHUB_OUTPUT
 
-      - name: 提交并推送
-        if: >
-          steps.parse.outputs.valid == 'true' &&
-          steps.parse.outputs.is_maintainer == 'true' &&
-          steps.parse.outputs.debug == 'false'
-        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -f public/data/waypoints.jsonl
-          git commit -m "添加坐标: ${{ steps.write.outputs.name }} (${{ steps.write.outputs.x }}, ${{ steps.write.outputs.y }}, ${{ steps.write.outputs.z }}) [${{ steps.write.outputs.dimension }}]
+          git commit -m "添加坐标: ${{ steps.parse.outputs.name }} (${{ steps.parse.outputs.x }}, ${{ steps.parse.outputs.y }}, ${{ steps.parse.outputs.z }}) [${{ steps.parse.outputs.dimension }}]
 
           Closes #${{ github.event.issue.number }}"
           git push
 
-      - name: 直接写入完成 — 评论并关闭
+      - name: 直接写入完成
         if: >
           steps.parse.outputs.valid == 'true' &&
           steps.parse.outputs.is_maintainer == 'true' &&
           steps.parse.outputs.debug == 'false'
         run: |
-          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "✨ **维护者提交 — 坐标已直接写入主分支**
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "✨ **维护者提交 — 坐标已直接写入**
 
           | 字段 | 值 |
           |------|-----|
-          | 名称 | ${{ steps.write.outputs.name }} |
-          | 坐标 | ${{ steps.write.outputs.x }} ${{ steps.write.outputs.y }} ${{ steps.write.outputs.z }} |
-          | 维度 | ${{ steps.write.outputs.dimension }} |
-          | 备注 | ${{ steps.write.outputs.note }} |
+          | 名称 | ${{ steps.parse.outputs.name }} |
+          | 坐标 | ${{ steps.parse.outputs.x }} ${{ steps.parse.outputs.y }} ${{ steps.parse.outputs.z }} |
+          | 维度 | ${{ steps.parse.outputs.dimension }} |
+          | 备注 | ${{ steps.parse.outputs.note }} |
           | 提交者 | @${{ github.event.issue.user.login }} |"
 
           gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}"
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:processed"
 
+      # ---- 维护者 + ci:try：写入 + 深度查重 → 等待审核 ----
+      - name: 检出仓库 (ci:try)
+        if: >
+          steps.parse.outputs.valid == 'true' &&
+          steps.parse.outputs.is_maintainer == 'true' &&
+          steps.parse.outputs.debug == 'true'
+        uses: actions/checkout@v4
+
+      - name: ci:try 写入
+        if: >
+          steps.parse.outputs.valid == 'true' &&
+          steps.parse.outputs.is_maintainer == 'true' &&
+          steps.parse.outputs.debug == 'true'
+        id: write_try
+        run: |
+          CONTRIBUTOR="${{ github.event.issue.user.login }}"
+          CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          mkdir -p public/data
+          touch public/data/waypoints.jsonl
+
+          NEW_LINE=$(jq -n \
+            --arg id "${{ steps.parse.outputs.record_id }}" \
+            --arg name "${{ steps.parse.outputs.name }}" \
+            --argjson x "${{ steps.parse.outputs.x }}" \
+            --argjson y "${{ steps.parse.outputs.y }}" \
+            --argjson z "${{ steps.parse.outputs.z }}" \
+            --arg dimension "${{ steps.parse.outputs.dimension }}" \
+            --arg category "" \
+            --arg note "${{ steps.parse.outputs.note }}" \
+            --arg contributor "$CONTRIBUTOR" \
+            --arg createdAt "$CREATED_AT" \
+            '{id: $id, name: $name, x: $x, y: $y, z: $z, dimension: $dimension, category: $category, note: $note, contributor: $contributor, createdAt: $createdAt}' | jq -c '.')
+
+          echo "$NEW_LINE" >> public/data/waypoints.jsonl
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f public/data/waypoints.jsonl
+          git commit -m "ci:try 写入: ${{ steps.parse.outputs.name }} (${{ steps.parse.outputs.x }}, ${{ steps.parse.outputs.y }}, ${{ steps.parse.outputs.z }}) [${{ steps.parse.outputs.dimension }}]
+
+          Refs: #${{ github.event.issue.number }}"
+          git push
+
+      - name: 深度查重分析
+        if: >
+          steps.parse.outputs.valid == 'true' &&
+          steps.parse.outputs.is_maintainer == 'true' &&
+          steps.parse.outputs.debug == 'true'
+        id: deepcheck
+        run: |
+          RID="${{ steps.parse.outputs.record_id }}"
+          NX="${{ steps.parse.outputs.x }}"
+          NY="${{ steps.parse.outputs.y }}"
+          NZ="${{ steps.parse.outputs.z }}"
+          ND="${{ steps.parse.outputs.dimension }}"
+          NN="${{ steps.parse.outputs.name }}"
+
+          WARNINGS=""
+          THRESHOLD=10  # 坐标近似阈值
+
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            OID=$(echo "$line" | jq -r '.id')
+            [ "$OID" = "$RID" ] && continue  # 跳过自己
+
+            OX=$(echo "$line" | jq -r '.x')
+            OZ=$(echo "$line" | jq -r '.z')
+            OD=$(echo "$line" | jq -r '.dimension')
+            ON=$(echo "$line" | jq -r '.name')
+
+            # 检查坐标近似（同维度下 XZ 距离）
+            if [ "$OD" = "$ND" ]; then
+              DX=$(( NX - OX ))
+              DZ=$(( NZ - OZ ))
+              DX=${DX#-}; DZ=${DZ#-}  # 绝对值
+              if [ "$DX" -le "$THRESHOLD" ] && [ "$DZ" -le "$THRESHOLD" ]; then
+                WARNINGS="$WARNINGS\n- ⚠️ **坐标近似**：与「${ON}」(${OX}, ~, ${OZ}) 在 ${OD} 距离过近（ΔX=${DX}, ΔZ=${DZ} ≤ ${THRESHOLD}），传送门可能串线"
+              fi
+            fi
+
+            # 检查名称包含
+            if [ "$NN" != "$ON" ]; then
+              if echo "$NN" | grep -qi "$ON" || echo "$ON" | grep -qi "$NN"; then
+                WARNINGS="$WARNINGS\n- 🔍 **名称相似**：与「${ON}」存在包含关系（\`${NN}\` ⇔ \`${ON}\`），可能是同一地点的别名或笔误"
+              fi
+            fi
+          done < public/data/waypoints.jsonl
+
+          if [ -n "$WARNINGS" ]; then
+            echo "has_warnings=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_warnings=false" >> $GITHUB_OUTPUT
+          fi
+          echo "warnings<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$WARNINGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: ci:try 评论 — 等待审核
+        if: >
+          steps.parse.outputs.valid == 'true' &&
+          steps.parse.outputs.is_maintainer == 'true' &&
+          steps.parse.outputs.debug == 'true'
+        run: |
+          WARN_SECTION=""
+          if [ "${{ steps.deepcheck.outputs.has_warnings }}" = "true" ]; then
+            WARN_SECTION="### ⚠️ 深度查重发现疑点
+
+          ${{ steps.deepcheck.outputs.warnings}}
+
+          ---
+          "
+          fi
+
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "🔬 **ci:try — 已写入主分支，等待审核**
+
+          | 字段 | 值 |
+          |------|-----|
+          | 名称 | ${{ steps.parse.outputs.name }} |
+          | 坐标 | ${{ steps.parse.outputs.x }} ${{ steps.parse.outputs.y }} ${{ steps.parse.outputs.z }} |
+          | 维度 | ${{ steps.parse.outputs.dimension }} |
+          | 备注 | ${{ steps.parse.outputs.note }} |
+          | 提交者 | @${{ github.event.issue.user.login }} |
+          | 记录 ID | \`${{ steps.parse.outputs.record_id }}\` |
+
+          ${WARN_SECTION}> 请维护者回复 \`通过\` / \`ok\` 确认，或 \`不通过\` / \`fail\` 回滚删除。"
+
+          if [ "${{ steps.deepcheck.outputs.has_warnings }}" = "false" ]; then
+            gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "✅ 深度查重未发现疑点"
+          fi
+
+      - name: 添加 ci:pending 标签
+        if: >
+          steps.parse.outputs.valid == 'true' &&
+          steps.parse.outputs.is_maintainer == 'true' &&
+          steps.parse.outputs.debug == 'true'
+        run: |
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:pending,ci:try"
+
   # ============================================================
-  # 阶段 2：审核（维护者评论触发，仅 ci:pending 状态的 Issue）
+  # 阶段 2：审核（维护者评论触发）
   # ============================================================
   review:
     if: >
@@ -258,7 +357,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 判断审核结果
+      - name: 判断审核结果 + 是否 ci:try
         id: review
         env:
           COMMENT: ${{ github.event.comment.body }}
@@ -273,8 +372,61 @@ jobs:
             echo "result=ignored" >> $GITHUB_OUTPUT
           fi
 
+          if echo '${{ toJson(github.event.issue.labels.*.name) }}' | grep -q 'ci:try'; then
+            echo "is_try=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_try=false" >> $GITHUB_OUTPUT
+          fi
+
+      # ==== ci:try 审核拒绝 → 回滚删除 ====
+      - name: 检出仓库 (回滚)
+        if: >
+          steps.review.outputs.result == 'rejected' &&
+          steps.review.outputs.is_try == 'true'
+        uses: actions/checkout@v4
+
+      - name: 回滚 — 按 ID 删除
+        if: >
+          steps.review.outputs.result == 'rejected' &&
+          steps.review.outputs.is_try == 'true'
+        id: rollback
+        env:
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          # 从 issue body 解析记录 ID（ci:try 评论中有）
+          # 从 waypoints.jsonl 中读取最后一条 ci:try 开头的记录
+          RID=$(grep '"id":"ci-' public/data/waypoints.jsonl | tail -1 | jq -r '.id')
+          echo "rollback_id=$RID" >> $GITHUB_OUTPUT
+          grep -v "\"id\":\"$RID\"" public/data/waypoints.jsonl > /tmp/waypoints_clean.jsonl
+          mv /tmp/waypoints_clean.jsonl public/data/waypoints.jsonl
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f public/data/waypoints.jsonl
+          git commit -m "ci:try 回滚: 删除记录 $RID
+
+          Refs: #${{ github.event.issue.number }}"
+          git push
+
+      - name: 回滚完成
+        if: >
+          steps.review.outputs.result == 'rejected' &&
+          steps.review.outputs.is_try == 'true'
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "🚫 **审核未通过 — ci:try 记录已回滚删除**
+
+          审核人: @${{ github.event.comment.user.login }}
+          已删除记录: \`${{ steps.rollback.outputs.rollback_id }}\`
+
+          请根据反馈修正后重新提交。"
+
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:rejected"
+
+      # ==== 正常审核拒绝 ====
       - name: 审核拒绝
-        if: steps.review.outputs.result == 'rejected'
+        if: >
+          steps.review.outputs.result == 'rejected' &&
+          steps.review.outputs.is_try == 'false'
         run: |
           gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "🚫 **审核未通过**
 
@@ -284,75 +436,30 @@ jobs:
 
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:rejected"
 
-      # ---- 判断是否调试模式 ----
-      - name: 检查调试标记
-        id: mode
-        run: |
-          if echo '${{ toJson(github.event.issue.labels.*.name) }}' | grep -q 'ci:try'; then
-            echo "is_try=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_try=false" >> $GITHUB_OUTPUT
-          fi
-
-      # ---- 审核通过 + ci:try：模拟，不写入 ----
-      - name: 模拟 — 解析预览
+      # ==== ci:try 审核通过：数据已在，直接关闭 ====
+      - name: ci:try 审核通过
         if: >
           steps.review.outputs.result == 'approved' &&
-          steps.mode.outputs.is_try == 'true'
-        id: simulate
-        env:
-          BODY: ${{ github.event.issue.body }}
+          steps.review.outputs.is_try == 'true'
         run: |
-          parse_field() {
-            echo "$BODY" | sed -n "/### $1/,/### /p" | sed '1d;$d' | sed '/^$/d' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
-          }
-          NAME=$(parse_field "名称")
-          COORDS_CLEAN=$(echo "$(parse_field "坐标")" | tr ',' ' ')
-          X=$(echo "$COORDS_CLEAN" | awk '{print $1}')
-          Y=$(echo "$COORDS_CLEAN" | awk '{print $2}')
-          Z=$(echo "$COORDS_CLEAN" | awk '{print $3}')
-          DIMENSION_RAW=$(parse_field "维度")
-          DIMENSION=$(echo "$DIMENSION_RAW" | grep -oP '(?<=\().*(?=\))' || echo "$DIMENSION_RAW")
-          NOTE=$(parse_field "备注" || true)
-          echo "name=$NAME" >> $GITHUB_OUTPUT
-          echo "x=$X" >> $GITHUB_OUTPUT
-          echo "y=$Y" >> $GITHUB_OUTPUT
-          echo "z=$Z" >> $GITHUB_OUTPUT
-          echo "dimension=$DIMENSION" >> $GITHUB_OUTPUT
-          echo "note=$NOTE" >> $GITHUB_OUTPUT
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "✨ **审核通过 (ci:try) — 数据已确认**
 
-      - name: 模拟 — 评论并关闭
-        if: >
-          steps.review.outputs.result == 'approved' &&
-          steps.mode.outputs.is_try == 'true'
-        run: |
-          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "🔬 **审核通过 (ci:try) — 模拟完成，未写入数据**
-
-          | 字段 | 值 |
-          |------|-----|
-          | 名称 | ${{ steps.simulate.outputs.name }} |
-          | 坐标 | ${{ steps.simulate.outputs.x }} ${{ steps.simulate.outputs.y }} ${{ steps.simulate.outputs.z }} |
-          | 维度 | ${{ steps.simulate.outputs.dimension }} |
-          | 备注 | ${{ steps.simulate.outputs.note }} |
-
-          审核人: @${{ github.event.comment.user.login }}
-
-          > 调试模式：已跳过真实写入。如需正式提交，请新建不勾选调试选项的 Issue。"
+          审核人: @${{ github.event.comment.user.login }}"
 
           gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}"
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:approved,ci:processed"
 
-      # ---- 审核通过 + 正常：真实写入 ----
-      - name: 检出仓库
+      # ==== 正常审核通过：写入 ====
+      - name: 检出仓库 (写入)
         if: >
           steps.review.outputs.result == 'approved' &&
-          steps.mode.outputs.is_try == 'false'
+          steps.review.outputs.is_try == 'false'
         uses: actions/checkout@v4
 
       - name: 审核通过 — 写入
         if: >
           steps.review.outputs.result == 'approved' &&
-          steps.mode.outputs.is_try == 'false'
+          steps.review.outputs.is_try == 'false'
         id: write
         env:
           BODY: ${{ github.event.issue.body }}
@@ -365,8 +472,7 @@ jobs:
           COORDS=$(parse_field "坐标")
           DIMENSION_RAW=$(parse_field "维度")
           NOTE=$(parse_field "备注" || true)
-          DIMENSION=$(echo "$DIMENSION_RAW" | grep -oP '(?<=\().*(?=\))' || echo "$DIMENSION_RAW")
-
+          DIMENSION=$(echo "$DIMENSION_RAW" | grep -oP '(?<=\\().*(?=\\))' || echo "$DIMENSION_RAW")
           COORDS_CLEAN=$(echo "$COORDS" | tr ',' ' ')
           X=$(echo "$COORDS_CLEAN" | awk '{print $1}')
           Y=$(echo "$COORDS_CLEAN" | awk '{print $2}')
@@ -390,8 +496,7 @@ jobs:
             --arg note "$NOTE" \
             --arg contributor "$CONTRIBUTOR" \
             --arg createdAt "$CREATED_AT" \
-            '{id: $id, name: $name, x: $x, y: $y, z: $z, dimension: $dimension, category: $category, note: $note, contributor: $contributor, createdAt: $createdAt}' | \
-            jq -c '.')
+            '{id: $id, name: $name, x: $x, y: $y, z: $z, dimension: $dimension, category: $category, note: $note, contributor: $contributor, createdAt: $createdAt}' | jq -c '.')
 
           echo "$NEW_LINE" >> public/data/waypoints.jsonl
           echo "name=$NAME" >> $GITHUB_OUTPUT
@@ -404,7 +509,7 @@ jobs:
       - name: 提交并推送
         if: >
           steps.review.outputs.result == 'approved' &&
-          steps.mode.outputs.is_try == 'false'
+          steps.review.outputs.is_try == 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -417,7 +522,7 @@ jobs:
       - name: 审核通过 — 评论并关闭
         if: >
           steps.review.outputs.result == 'approved' &&
-          steps.mode.outputs.is_try == 'false'
+          steps.review.outputs.is_try == 'false'
         run: |
           gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "✨ **审核通过，坐标已写入主分支**
 
