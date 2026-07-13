@@ -1,0 +1,45 @@
+name: 提交新坐标点
+description: 在服务器地图上记录一个新坐标点
+title: "[坐标] "
+labels: ["ci:add_waypoint"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > 请填写以下信息，CI 将自动校验并追加到坐标簿。
+
+  - type: input
+    id: name
+    attributes:
+      label: 名称
+      description: 这个地点的名字，例如「我家」「史莱姆农场」「猪灵交易所」
+      placeholder: 我家
+    validations:
+      required: true
+
+  - type: input
+    id: coords
+    attributes:
+      label: 坐标
+      description: "X Y Z 坐标，用**空格**或**英文逗号**分隔（不可混用）"
+      placeholder: "-512 64 1024"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: dimension
+    attributes:
+      label: 维度
+      options:
+        - 主世界 (overworld)
+        - 下界 (nether)
+        - 末地 (end)
+    validations:
+      required: true
+
+  - type: textarea
+    id: note
+    attributes:
+      label: 备注
+      description: 选填，补充说明（附近地标、注意事项等）
+      placeholder: 橡木小屋，旁边有村庄和铁匠铺

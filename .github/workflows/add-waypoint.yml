@@ -1,0 +1,168 @@
+name: 处理坐标提交
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  process-waypoint:
+    # 仅在 ci:add_waypoint 标签被添加时运行，且只运行一次
+    if: >
+      github.event.label.name == 'ci:add_waypoint' &&
+      !contains(github.event.issue.labels.*.name, 'ci:processed') &&
+      !contains(github.event.issue.labels.*.name, 'ci:invalid')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 解析 Issue 表单并校验
+        id: parse
+        env:
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          set -e
+
+          # 解析 markdown 表单字段
+          parse_field() {
+            echo "$BODY" | sed -n "/### $1/,/### /p" | sed '1d;$d' | sed '/^$/d' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+          }
+
+          NAME=$(parse_field "名称")
+          COORDS=$(parse_field "坐标")
+          DIMENSION_RAW=$(parse_field "维度")
+          NOTE=$(parse_field "备注" || true)
+
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+          echo "coords=$COORDS" >> $GITHUB_OUTPUT
+          echo "note=$NOTE" >> $GITHUB_OUTPUT
+
+          # 解析维度（格式: "主世界 (overworld)" → "overworld"）
+          DIMENSION=$(echo "$DIMENSION_RAW" | grep -oP '(?<=\().*(?=\))' || echo "$DIMENSION_RAW")
+          echo "dimension=$DIMENSION" >> $GITHUB_OUTPUT
+
+          # === 校验 ===
+          ERRORS=""
+
+          # 名称
+          if [ -z "$NAME" ]; then
+            ERRORS="$ERRORS\n- ❌ 名称为空"
+          fi
+
+          # 坐标
+          COORDS_CLEAN=$(echo "$COORDS" | tr ',' ' ')
+          COORD_COUNT=$(echo "$COORDS_CLEAN" | wc -w)
+          if [ "$COORD_COUNT" -ne 3 ]; then
+            ERRORS="$ERRORS\n- ❌ 坐标需要 X Y Z 三个数字（空格或逗号分隔），检测到 $COORD_COUNT 个"
+          else
+            X=$(echo "$COORDS_CLEAN" | awk '{print $1}')
+            Y=$(echo "$COORDS_CLEAN" | awk '{print $2}')
+            Z=$(echo "$COORDS_CLEAN" | awk '{print $3}')
+            if ! [[ "$X" =~ ^-?[0-9]+$ ]] || ! [[ "$Y" =~ ^-?[0-9]+$ ]] || ! [[ "$Z" =~ ^-?[0-9]+$ ]]; then
+              ERRORS="$ERRORS\n- ❌ 坐标必须为整数"
+            fi
+            echo "x=$X" >> $GITHUB_OUTPUT
+            echo "y=$Y" >> $GITHUB_OUTPUT
+            echo "z=$Z" >> $GITHUB_OUTPUT
+            # 检测混用
+            HAS_COMMA=$(echo "$COORDS" | grep -c ',' || true)
+            HAS_SPACE=$(echo "$COORDS" | grep -c '[[:space:]]' || true)
+            if [ "$HAS_COMMA" -gt 0 ] && [ "$HAS_SPACE" -gt 0 ] && ! echo "$COORDS" | grep -qE '^-?[0-9]+, -?[0-9]+, -?[0-9]+$'; then
+              # 检查是否逗号后的空格模式（合法）
+              if ! echo "$COORDS" | grep -qE '^-?[0-9]+, *-?[0-9]+, *-?[0-9]+$'; then
+                ERRORS="$ERRORS\n- ❌ 坐标分隔符混用，请用纯空格或纯英文逗号"
+              fi
+            fi
+          fi
+
+          # 维度
+          case "$DIMENSION" in
+            overworld|nether|end) ;;
+            *) ERRORS="$ERRORS\n- ❌ 维度无效: '$DIMENSION'（应为 overworld / nether / end）" ;;
+          esac
+
+          # === 查重 ===
+          if [ -f public/data/waypoints.jsonl ]; then
+            if grep -q "\"name\":\"$NAME\"" public/data/waypoints.jsonl && grep "\"name\":\"$NAME\"" public/data/waypoints.jsonl | grep -q "\"dimension\":\"$DIMENSION\""; then
+              ERRORS="$ERRORS\n- ❌ 坐标「$NAME」在维度「$DIMENSION」已存在"
+            fi
+          fi
+
+          if [ -n "$ERRORS" ]; then
+            echo "校验失败:"
+            echo -e "$ERRORS"
+            echo "errors<<EOF" >> $GITHUB_OUTPUT
+            echo -e "$ERRORS" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "valid=false" >> $GITHUB_OUTPUT
+          else
+            echo "valid=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 追加坐标数据
+        if: steps.parse.outputs.valid == 'true'
+        run: |
+          CONTRIBUTOR="${{ github.event.issue.user.login }}"
+          ID="ci-$(date +%s)-${{ github.event.issue.number }}"
+          CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          NEW_LINE=$(jq -n \
+            --arg id "$ID" \
+            --arg name "${{ steps.parse.outputs.name }}" \
+            --argjson x "${{ steps.parse.outputs.x }}" \
+            --argjson y "${{ steps.parse.outputs.y }}" \
+            --argjson z "${{ steps.parse.outputs.z }}" \
+            --arg dimension "${{ steps.parse.outputs.dimension }}" \
+            --arg category "" \
+            --arg note "${{ steps.parse.outputs.note }}" \
+            --arg contributor "$CONTRIBUTOR" \
+            --arg createdAt "$CREATED_AT" \
+            '{id: $id, name: $name, x: $x, y: $y, z: $z, dimension: $dimension, category: $category, note: $note, contributor: $contributor, createdAt: $createdAt}' | \
+            jq -c '.')
+
+          echo "$NEW_LINE" >> public/data/waypoints.jsonl
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f public/data/waypoints.jsonl
+          git commit -m "添加坐标: ${{ steps.parse.outputs.name }} (${{ steps.parse.outputs.x }}, ${{ steps.parse.outputs.y }}, ${{ steps.parse.outputs.z }}) [${{ steps.parse.outputs.dimension }}]
+
+          Closes #${{ github.event.issue.number }}"
+          git push
+
+      - name: 评论结果
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ISSUE="${{ github.event.issue.number }}"
+          REPO="${{ github.repository }}"
+
+          if [ "${{ steps.parse.outputs.valid }}" = "true" ]; then
+            gh issue comment "$ISSUE" --repo "$REPO" -b "✅ **坐标已添加**
+
+          | 字段 | 值 |
+          |------|-----|
+          | 名称 | ${{ steps.parse.outputs.name }} |
+          | 坐标 | ${{ steps.parse.outputs.x }} ${{ steps.parse.outputs.y }} ${{ steps.parse.outputs.z }} |
+          | 维度 | ${{ steps.parse.outputs.dimension }} |
+          | 备注 | ${{ steps.parse.outputs.note }} |
+          | 贡献者 | @${{ github.event.issue.user.login }} |
+
+          数据已合入主分支 ✨"
+
+            gh issue close "$ISSUE" --repo "$REPO"
+            gh issue edit "$ISSUE" --repo "$REPO" --add-label "ci:processed"
+          else
+            gh issue comment "$ISSUE" --repo "$REPO" -b "❌ **校验失败，请修正后重新提交：**
+
+          ${{ steps.parse.outputs.errors }}"
+
+            gh issue edit "$ISSUE" --repo "$REPO" --add-label "ci:invalid"
+            gh issue edit "$ISSUE" --repo "$REPO" --remove-label "ci:add_waypoint"
+          fi
