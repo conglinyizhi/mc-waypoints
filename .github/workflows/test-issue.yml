@@ -1,9 +1,14 @@
-name: 测试 Issue 触发
+name: 测试 Issue
 on:
   issues:
     types: [opened, labeled]
 jobs:
   test:
     runs-on: ubuntu-latest
+    if: github.event.issue.state == 'open'
     steps:
-      - run: echo "ISSUE EVENT: ${{ github.event.action }}"
+      - name: 评论
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} -R ${{ github.repository }} -b "✅ CI 已触发: ${{ github.event.action }}"
