@@ -276,6 +276,8 @@ jobs:
       - name: 提交推送
         if: steps.review.outputs.result == 'approved'
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           cp public/data/waypoints.jsonl /tmp/waypoints.jsonl
           git fetch origin data
           git checkout data
