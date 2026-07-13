@@ -172,6 +172,22 @@ jobs:
 
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "$LABELS"
 
+      - name: 上报 CI 异常
+        if: failure()
+        run: |
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "[CI Bug] 校验 #${{ github.event.issue.number }} 时出错" \
+            --body "## CI 异常
+
+          - **触发 Issue**: #${{ github.event.issue.number }}
+          - **Workflow**: ${{ github.workflow }}
+          - **Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - **触发者**: @${{ github.actor }}
+
+          非预期的技术错误，请检查 [运行日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})。" \
+            --label "bug,ci"
+
   # ============================================================
   # 阶段 2：审核
   # ============================================================
@@ -275,3 +291,19 @@ jobs:
 
           gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}"
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:approved,ci:processed"
+
+      - name: 上报 CI 异常
+        if: failure()
+        run: |
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "[CI Bug] 审核 #${{ github.event.issue.number }} 时出错" \
+            --body "## CI 异常
+
+          - **触发 Issue**: #${{ github.event.issue.number }}
+          - **Workflow**: ${{ github.workflow }}
+          - **Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - **触发者**: @${{ github.actor }}
+
+          非预期的技术错误，请检查 [运行日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})。" \
+            --label "bug,ci"
