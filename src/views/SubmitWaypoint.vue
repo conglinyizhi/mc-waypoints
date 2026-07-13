@@ -197,7 +197,8 @@ function openIssue() {
   const name = encodeURIComponent(form.name.trim())
   const { x, y, z } = parsedCoords.value
   const coords = encodeURIComponent(`${x} ${y} ${z}`)
-  const dimension = encodeURIComponent(form.dimension)
+  const dimensionValue = { overworld: '主世界 (overworld)', nether: '下界 (nether)', end: '末地 (end)' }[form.dimension]
+  const dimension = encodeURIComponent(dimensionValue)
   const note = form.note.trim() ? encodeURIComponent(form.note.trim()) : ''
   const labels = 'ci:add_waypoint'
 
