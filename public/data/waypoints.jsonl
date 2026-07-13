@@ -1,0 +1,5 @@
+{"id":"example-1","name":"我家","x":128,"y":64,"z":256,"dimension":"overworld","category":"家","note":"橡木小屋，旁边有村庄","contributor":"zhangsan","createdAt":"2024-01-15T10:30:00Z"}
+{"id":"example-2","name":"史莱姆农场","x":512,"y":12,"z":-320,"dimension":"overworld","category":"农场","note":"沼泽生物群系，24层挂机","contributor":"lisi","createdAt":"2024-02-01T14:20:00Z"}
+{"id":"example-3","name":"猪灵交易中心","x":-64,"y":40,"z":-128,"dimension":"nether","category":"交易中心","note":"需穿金装备进入","contributor":"wangwu","createdAt":"2024-02-10T09:00:00Z"}
+{"id":"example-4","name":"末地传送门","x":-800,"y":45,"z":1000,"dimension":"overworld","category":"交通节点","note":"要塞内，电梯直达","contributor":"zhangsan","createdAt":"2024-02-15T18:45:00Z"}
+{"id":"example-5","name":"潜影贝农场","x":-200,"y":64,"z":-400,"dimension":"end","category":"农场","note":"末地外岛","contributor":"lisi","createdAt":"2024-03-01T12:00:00Z"}
