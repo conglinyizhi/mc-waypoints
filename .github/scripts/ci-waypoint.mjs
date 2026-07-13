@@ -78,8 +78,8 @@ function doParse() {
   const dimMatch = dimensionRaw.match(/\((\w+)\)/)
   const dimension = dimMatch ? dimMatch[1] : dimensionRaw
 
-  // 检测 ci:try
-  const debug = /\[x\].*ci:try/i.test(body)
+  // 检测 ci:review
+  const debug = /\[x\].*ci:review/i.test(body)
 
   const errors = []
 

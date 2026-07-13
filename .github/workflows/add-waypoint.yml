@@ -111,7 +111,7 @@ jobs:
           gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}"
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:processed"
 
-      # ---- pending 流程（普通用户 / ci:try）----
+      # ---- pending 流程（普通用户 / ci:review）----
       - name: 深度查重
         if: >
           steps.parse.outputs.valid == 'true' &&
@@ -140,8 +140,8 @@ jobs:
           LABELS="ci:pending"
           MODE=""
           if [ "${{ steps.parse.outputs.debug }}" = "true" ]; then
-            LABELS="$LABELS,ci:try"
-            MODE="🔬 **ci:try 调试模式**\n\n"
+            LABELS="$LABELS,ci:review"
+            MODE="🔬 **ci:review 审核模式**\n\n"
           fi
 
           WARN_SECTION=""

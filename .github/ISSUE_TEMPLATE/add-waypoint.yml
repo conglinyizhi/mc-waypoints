@@ -50,4 +50,4 @@ body:
       label: 调试选项（仅维护者）
       description: 维护者勾选此项将进入模拟流程，校验但不写入数据
       options:
-        - label: 模拟流程，不写入数据 (ci:try)
+        - label: 运行流程，即使有对应直接写入权限，也完成流程的检查和审核 (ci:review)
