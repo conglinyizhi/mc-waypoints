@@ -1,0 +1,9 @@
+name: 测试 Issue 触发
+on:
+  issues:
+    types: [opened, labeled]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "ISSUE EVENT: ${{ github.event.action }}"
