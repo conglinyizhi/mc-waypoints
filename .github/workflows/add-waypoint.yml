@@ -15,7 +15,7 @@ env:
 
 jobs:
   # ============================================================
-  # 阶段 1：校验 + 分流（ci:add_waypoint 标签触发）
+  # 阶段 1：校验 + 分流
   # ============================================================
   validate:
     if: >
@@ -27,86 +27,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: 解析并校验
         id: parse
         env:
           BODY: ${{ github.event.issue.body }}
           AUTHOR_ASSOC: ${{ github.event.issue.author_association }}
         run: |
-          set -e
+          RESULT=$(node .github/scripts/ci-waypoint.mjs parse)
+          echo "$RESULT" > /tmp/parse-result.json
 
-          parse_field() {
-            echo "$BODY" | sed -n "/### $1/,/### /p" | sed '1d;$d' | sed '/^$/d' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
-          }
-
-          NAME=$(parse_field "名称")
-          COORDS=$(parse_field "坐标")
-          DIMENSION_RAW=$(parse_field "维度")
-          NOTE=$(parse_field "备注" || true)
-
-          echo "name=$NAME" >> $GITHUB_OUTPUT
-          echo "coords=$COORDS" >> $GITHUB_OUTPUT
-          echo "note=$NOTE" >> $GITHUB_OUTPUT
-
-          DIMENSION=$(echo "$DIMENSION_RAW" | grep -oP '(?<=\().*(?=\\))' || echo "$DIMENSION_RAW")
-          echo "dimension=$DIMENSION" >> $GITHUB_OUTPUT
-
-          if echo "$BODY" | grep -q '\- \[x\].*ci:try'; then
-            echo "debug=true" >> $GITHUB_OUTPUT
-          else
-            echo "debug=false" >> $GITHUB_OUTPUT
-          fi
-
-          case "$AUTHOR_ASSOC" in
-            OWNER|COLLABORATOR|MEMBER)
-              echo "is_maintainer=true" >> $GITHUB_OUTPUT ;;
-            *)
-              echo "is_maintainer=false" >> $GITHUB_OUTPUT ;;
-          esac
-
-          ERRORS=""
-
-          if [ -z "$NAME" ]; then
-            ERRORS="$ERRORS\n- ❌ 名称为空"
-          fi
-
-          COORDS_CLEAN=$(echo "$COORDS" | tr ',' ' ')
-          COORD_COUNT=$(echo "$COORDS_CLEAN" | wc -w)
-          if [ "$COORD_COUNT" -ne 3 ]; then
-            ERRORS="$ERRORS\n- ❌ 坐标需要 X Y Z 三个数字，检测到 $COORD_COUNT 个"
-          else
-            X=$(echo "$COORDS_CLEAN" | awk '{print $1}')
-            Y=$(echo "$COORDS_CLEAN" | awk '{print $2}')
-            Z=$(echo "$COORDS_CLEAN" | awk '{print $3}')
-            if ! [[ "$X" =~ ^-?[0-9]+$ ]] || ! [[ "$Y" =~ ^-?[0-9]+$ ]] || ! [[ "$Z" =~ ^-?[0-9]+$ ]]; then
-              ERRORS="$ERRORS\n- ❌ 坐标必须为整数"
-            fi
-            echo "x=$X" >> $GITHUB_OUTPUT
-            echo "y=$Y" >> $GITHUB_OUTPUT
-            echo "z=$Z" >> $GITHUB_OUTPUT
-            HAS_COMMA=$(echo "$COORDS" | grep -c ',' || true)
-            HAS_SPACE=$(echo "$COORDS" | grep -c '[[:space:]]' || true)
-            if [ "$HAS_COMMA" -gt 0 ] && [ "$HAS_SPACE" -gt 0 ]; then
-              if ! echo "$COORDS" | grep -qE '^-?[0-9]+, *-?[0-9]+, *-?[0-9]+$'; then
-                ERRORS="$ERRORS\n- ❌ 坐标分隔符混用，请用纯空格或纯英文逗号"
-              fi
-            fi
-          fi
-
-          case "$DIMENSION" in
-            overworld|nether|end) ;;
-            *) ERRORS="$ERRORS\n- ❌ 维度无效: '$DIMENSION'（应为 overworld / nether / end）" ;;
-          esac
-
-          echo "errors<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$ERRORS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          if [ -n "$ERRORS" ]; then
-            echo "valid=false" >> $GITHUB_OUTPUT
-          else
-            echo "valid=true" >> $GITHUB_OUTPUT
-          fi
+          echo "valid=$(echo "$RESULT" | jq -r '.valid')" >> $GITHUB_OUTPUT
+          echo "name=$(echo "$RESULT" | jq -r '.name')" >> $GITHUB_OUTPUT
+          echo "x=$(echo "$RESULT" | jq -r '.x')" >> $GITHUB_OUTPUT
+          echo "y=$(echo "$RESULT" | jq -r '.y')" >> $GITHUB_OUTPUT
+          echo "z=$(echo "$RESULT" | jq -r '.z')" >> $GITHUB_OUTPUT
+          echo "dimension=$(echo "$RESULT" | jq -r '.dimension')" >> $GITHUB_OUTPUT
+          echo "note=$(echo "$RESULT" | jq -r '.note')" >> $GITHUB_OUTPUT
+          echo "debug=$(echo "$RESULT" | jq -r '.debug')" >> $GITHUB_OUTPUT
+          echo "is_maintainer=$(echo "$RESULT" | jq -r '.isMaintainer')" >> $GITHUB_OUTPUT
+          echo "errors=$(echo "$RESULT" | jq -r '.errors | join("\n")')" >> $GITHUB_OUTPUT
 
       # ---- 校验失败 ----
       - name: 校验失败
@@ -118,13 +59,6 @@ jobs:
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:invalid"
 
       # ---- 维护者 + 无 try → 直接写入 ----
-      - name: 检出 (直写)
-        if: >
-          steps.parse.outputs.valid == 'true' &&
-          steps.parse.outputs.is_maintainer == 'true' &&
-          steps.parse.outputs.debug == 'false'
-        uses: actions/checkout@v4
-
       - name: 直接写入
         if: >
           steps.parse.outputs.valid == 'true' &&
@@ -132,11 +66,10 @@ jobs:
           steps.parse.outputs.debug == 'false'
         run: |
           CONTRIBUTOR="${{ github.event.issue.user.login }}"
-          CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           ID="ci-$(date +%s)-${{ github.event.issue.number }}"
-          mkdir -p public/data && touch public/data/waypoints.jsonl
+          CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-          NEW_LINE=$(jq -n \
+          RECORD=$(jq -n \
             --arg id "$ID" \
             --arg name "${{ steps.parse.outputs.name }}" \
             --argjson x "${{ steps.parse.outputs.x }}" \
@@ -149,7 +82,7 @@ jobs:
             --arg createdAt "$CREATED_AT" \
             '{id:$id,name:$name,x:$x,y:$y,z:$z,dimension:$dimension,category:$category,note:$note,contributor:$contributor,createdAt:$createdAt}' | jq -c '.')
 
-          echo "$NEW_LINE" >> public/data/waypoints.jsonl
+          node .github/scripts/ci-waypoint.mjs write public/data/waypoints.jsonl "$RECORD"
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -178,61 +111,26 @@ jobs:
           gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}"
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:processed"
 
-      # ---- pending 流程（普通用户 / ci:try 维护者）----
-      - name: 检出 (pending)
-        if: >
-          steps.parse.outputs.valid == 'true' &&
-          ( steps.parse.outputs.is_maintainer == 'false' || steps.parse.outputs.debug == 'true' )
-        uses: actions/checkout@v4
-
+      # ---- pending 流程（普通用户 / ci:try）----
       - name: 深度查重
         if: >
           steps.parse.outputs.valid == 'true' &&
           ( steps.parse.outputs.is_maintainer == 'false' || steps.parse.outputs.debug == 'true' )
         id: deepcheck
+        env:
+          NAME: ${{ steps.parse.outputs.name }}
+          X: ${{ steps.parse.outputs.x }}
+          Z: ${{ steps.parse.outputs.z }}
+          DIMENSION: ${{ steps.parse.outputs.dimension }}
         run: |
-          NX="${{ steps.parse.outputs.x }}"
-          NZ="${{ steps.parse.outputs.z }}"
-          ND="${{ steps.parse.outputs.dimension }}"
-          NN="${{ steps.parse.outputs.name }}"
-          THRESHOLD=10
-          WARNINGS=""
+          RESULT=$(node .github/scripts/ci-waypoint.mjs deepcheck public/data/waypoints.jsonl)
+          WARNINGS=$(echo "$RESULT" | jq -r '.warnings')
+          COUNT=$(echo "$RESULT" | jq -r '.warnings | length')
 
-          if [ ! -f public/data/waypoints.jsonl ] || [ ! -s public/data/waypoints.jsonl ]; then
-            echo "has_warnings=false" >> $GITHUB_OUTPUT
-            exit 0
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+          if [ "$COUNT" -gt 0 ]; then
+            echo "WARN_MD=$(echo "$RESULT" | jq -r '[.warnings[].msg] | join("\n\n")')" >> $GITHUB_OUTPUT
           fi
-
-          while IFS= read -r line; do
-            [ -z "$line" ] && continue
-            OX=$(echo "$line" | jq -r '.x // 0')
-            OZ=$(echo "$line" | jq -r '.z // 0')
-            OD=$(echo "$line" | jq -r '.dimension // ""')
-            ON=$(echo "$line" | jq -r '.name // ""')
-
-            if [ "$OD" = "$ND" ]; then
-              DX=$(( NX - OX )); DX=${DX#-}
-              DZ=$(( NZ - OZ )); DZ=${DZ#-}
-              if [ "$DX" -le "$THRESHOLD" ] && [ "$DZ" -le "$THRESHOLD" ]; then
-                WARNINGS="${WARNINGS}\n- ⚠️ **坐标近似**：与「${ON}」(${OX}, ~, ${OZ}) 同维度距离过近（ΔX=${DX}, ΔZ=${DZ} ≤ ${THRESHOLD}），传送门可能串线"
-              fi
-            fi
-
-            if [ "$NN" != "$ON" ]; then
-              if echo "$NN" | grep -qi "$ON" || echo "$ON" | grep -qi "$NN"; then
-                WARNINGS="${WARNINGS}\n- 🔍 **名称相似**：与「${ON}」存在包含关系（\`${NN}\` ⇔ \`${ON}\`），可能是同一地点的别名或笔误"
-              fi
-            fi
-          done < public/data/waypoints.jsonl
-
-          if [ -n "$WARNINGS" ]; then
-            echo "has_warnings=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_warnings=false" >> $GITHUB_OUTPUT
-          fi
-          echo "warnings<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$WARNINGS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: pending 评论
         if: >
@@ -247,10 +145,10 @@ jobs:
           fi
 
           WARN_SECTION=""
-          if [ "${{ steps.deepcheck.outputs.has_warnings }}" = "true" ]; then
-            WARN_SECTION="### ⚠️ 深度查重发现疑点
+          if [ "${{ steps.deepcheck.outputs.count }}" != "0" ]; then
+            WARN_SECTION="### ⚠️ 深度查重发现 ${{ steps.deepcheck.outputs.count }} 个疑点
 
-          ${{ steps.deepcheck.outputs.warnings}}
+          ${{ steps.deepcheck.outputs.WARN_MD }}
 
           ---
           "
@@ -268,14 +166,14 @@ jobs:
 
           ${WARN_SECTION}> 请维护者回复 \`通过\` / \`ok\` 确认写入，或 \`不通过\` / \`fail\` 拒绝。"
 
-          if [ "${{ steps.deepcheck.outputs.has_warnings }}" = "false" ]; then
+          if [ "${{ steps.deepcheck.outputs.count }}" = "0" ]; then
             gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "✅ 深度查重未发现疑点"
           fi
 
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "$LABELS"
 
   # ============================================================
-  # 阶段 2：审核（维护者评论触发）
+  # 阶段 2：审核
   # ============================================================
   review:
     if: >
@@ -294,17 +192,15 @@ jobs:
         env:
           COMMENT: ${{ github.event.comment.body }}
         run: |
-          BODY_LOWER=$(echo "$COMMENT" | tr '[:upper:]' '[:lower:]')
-
-          if echo "$BODY_LOWER" | grep -qE '通过|ok'; then
+          LOWER=$(echo "$COMMENT" | tr '[:upper:]' '[:lower:]')
+          if echo "$LOWER" | grep -qE '通过|ok'; then
             echo "result=approved" >> $GITHUB_OUTPUT
-          elif echo "$BODY_LOWER" | grep -qE '不通过|fail|no|拒绝|reject'; then
+          elif echo "$LOWER" | grep -qE '不通过|fail|no|拒绝|reject'; then
             echo "result=rejected" >> $GITHUB_OUTPUT
           else
             echo "result=ignored" >> $GITHUB_OUTPUT
           fi
 
-      # ---- 审核拒绝 ----
       - name: 审核拒绝
         if: steps.review.outputs.result == 'rejected'
         run: |
@@ -315,56 +211,42 @@ jobs:
           请根据反馈修正后重新提交 Issue。"
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:rejected"
 
-      # ---- 审核通过 → 写入 ----
-      - name: 检出
+      - uses: actions/checkout@v4
         if: steps.review.outputs.result == 'approved'
-        uses: actions/checkout@v4
 
-      - name: 写入
+      - name: 审核通过 — 解析并写入
         if: steps.review.outputs.result == 'approved'
         id: write
         env:
           BODY: ${{ github.event.issue.body }}
+          AUTHOR_ASSOC: ${{ github.event.issue.author_association }}
         run: |
-          parse_field() {
-            echo "$BODY" | sed -n "/### $1/,/### /p" | sed '1d;$d' | sed '/^$/d' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
-          }
-          NAME=$(parse_field "名称")
-          COORDS=$(parse_field "坐标")
-          DIMENSION_RAW=$(parse_field "维度")
-          NOTE=$(parse_field "备注" || true)
-          DIMENSION=$(echo "$DIMENSION_RAW" | grep -oP '(?<=\\().*(?=\\))' || echo "$DIMENSION_RAW")
-          COORDS_CLEAN=$(echo "$COORDS" | tr ',' ' ')
-          X=$(echo "$COORDS_CLEAN" | awk '{print $1}')
-          Y=$(echo "$COORDS_CLEAN" | awk '{print $2}')
-          Z=$(echo "$COORDS_CLEAN" | awk '{print $3}')
+          RESULT=$(node .github/scripts/ci-waypoint.mjs parse)
+          echo "name=$(echo "$RESULT" | jq -r '.name')" >> $GITHUB_OUTPUT
+          echo "x=$(echo "$RESULT" | jq -r '.x')" >> $GITHUB_OUTPUT
+          echo "y=$(echo "$RESULT" | jq -r '.y')" >> $GITHUB_OUTPUT
+          echo "z=$(echo "$RESULT" | jq -r '.z')" >> $GITHUB_OUTPUT
+          echo "dimension=$(echo "$RESULT" | jq -r '.dimension')" >> $GITHUB_OUTPUT
+          echo "note=$(echo "$RESULT" | jq -r '.note')" >> $GITHUB_OUTPUT
 
           CONTRIBUTOR="${{ github.event.issue.user.login }}"
           ID="ci-$(date +%s)-${{ github.event.issue.number }}"
           CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-          mkdir -p public/data && touch public/data/waypoints.jsonl
-
-          NEW_LINE=$(jq -n \
+          RECORD=$(jq -n \
             --arg id "$ID" \
-            --arg name "$NAME" \
-            --argjson x "$X" \
-            --argjson y "$Y" \
-            --argjson z "$Z" \
-            --arg dimension "$DIMENSION" \
+            --arg name "$(echo "$RESULT" | jq -r '.name')" \
+            --argjson x "$(echo "$RESULT" | jq -r '.x')" \
+            --argjson y "$(echo "$RESULT" | jq -r '.y')" \
+            --argjson z "$(echo "$RESULT" | jq -r '.z')" \
+            --arg dimension "$(echo "$RESULT" | jq -r '.dimension')" \
             --arg category "" \
-            --arg note "$NOTE" \
+            --arg note "$(echo "$RESULT" | jq -r '.note')" \
             --arg contributor "$CONTRIBUTOR" \
             --arg createdAt "$CREATED_AT" \
             '{id:$id,name:$name,x:$x,y:$y,z:$z,dimension:$dimension,category:$category,note:$note,contributor:$contributor,createdAt:$createdAt}' | jq -c '.')
 
-          echo "$NEW_LINE" >> public/data/waypoints.jsonl
-          echo "name=$NAME" >> $GITHUB_OUTPUT
-          echo "x=$X" >> $GITHUB_OUTPUT
-          echo "y=$Y" >> $GITHUB_OUTPUT
-          echo "z=$Z" >> $GITHUB_OUTPUT
-          echo "dimension=$DIMENSION" >> $GITHUB_OUTPUT
-          echo "note=$NOTE" >> $GITHUB_OUTPUT
+          node .github/scripts/ci-waypoint.mjs write public/data/waypoints.jsonl "$RECORD"
 
       - name: 提交推送
         if: steps.review.outputs.result == 'approved'
