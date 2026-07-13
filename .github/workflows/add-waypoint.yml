@@ -129,13 +129,24 @@ jobs:
 
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:invalid"
 
-      # ---- 普通用户：校验通过 → 等待审核 ----
+      # ---- 普通用户 / 维护者+ci:try：校验通过 → 等待审核 ----
       - name: 等待审核
         if: >
           steps.parse.outputs.valid == 'true' &&
-          steps.parse.outputs.is_maintainer == 'false'
+          (
+            steps.parse.outputs.is_maintainer == 'false' ||
+            steps.parse.outputs.debug == 'true'
+          )
         run: |
-          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "✅ **校验通过，等待审核**
+          LABELS="ci:pending"
+          if [ "${{ steps.parse.outputs.debug }}" = "true" ]; then
+            LABELS="$LABELS,ci:try"
+            MODE_MSG="🔬 **调试模式 (ci:try)** — 审核通过后仅模拟，不实际写入\n\n"
+          else
+            MODE_MSG=""
+          fi
+
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "${MODE_MSG}✅ **校验通过，等待审核**
 
           | 字段 | 值 |
           |------|-----|
@@ -145,30 +156,9 @@ jobs:
           | 备注 | ${{ steps.parse.outputs.note }} |
           | 提交者 | @${{ github.event.issue.user.login }} |
 
-          > 请维护者回复 \`通过\` / \`ok\` 确认写入，或 \`不通过\` / \`fail\` 拒绝。"
+          > 请维护者回复 \`通过\` / \`ok\` 确认，或 \`不通过\` / \`fail\` 拒绝。"
 
-          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:pending"
-
-      # ---- 维护者 + 调试开关：模拟流程 ----
-      - name: 模拟流程
-        if: >
-          steps.parse.outputs.valid == 'true' &&
-          steps.parse.outputs.is_maintainer == 'true' &&
-          steps.parse.outputs.debug == 'true'
-        run: |
-          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "🔬 **模拟流程（ci:try）— 校验通过，未写入数据**
-
-          | 字段 | 值 |
-          |------|-----|
-          | 名称 | ${{ steps.parse.outputs.name }} |
-          | 坐标 | ${{ steps.parse.outputs.x }} ${{ steps.parse.outputs.y }} ${{ steps.parse.outputs.z }} |
-          | 维度 | ${{ steps.parse.outputs.dimension }} |
-          | 备注 | ${{ steps.parse.outputs.note }} |
-
-          > 调试模式：已跳过写入和审核。如需正式提交，请关闭此 Issue 并新建一个不勾选调试选项的 Issue。"
-
-          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:try"
-          gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}"
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "$LABELS"
 
       # ---- 维护者 + 无调试：直接写入 ----
       - name: 检出仓库
@@ -294,12 +284,75 @@ jobs:
 
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:rejected"
 
+      # ---- 判断是否调试模式 ----
+      - name: 检查调试标记
+        id: mode
+        run: |
+          if echo '${{ toJson(github.event.issue.labels.*.name) }}' | grep -q 'ci:try'; then
+            echo "is_try=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_try=false" >> $GITHUB_OUTPUT
+          fi
+
+      # ---- 审核通过 + ci:try：模拟，不写入 ----
+      - name: 模拟 — 解析预览
+        if: >
+          steps.review.outputs.result == 'approved' &&
+          steps.mode.outputs.is_try == 'true'
+        id: simulate
+        env:
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          parse_field() {
+            echo "$BODY" | sed -n "/### $1/,/### /p" | sed '1d;$d' | sed '/^$/d' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+          }
+          NAME=$(parse_field "名称")
+          COORDS_CLEAN=$(echo "$(parse_field "坐标")" | tr ',' ' ')
+          X=$(echo "$COORDS_CLEAN" | awk '{print $1}')
+          Y=$(echo "$COORDS_CLEAN" | awk '{print $2}')
+          Z=$(echo "$COORDS_CLEAN" | awk '{print $3}')
+          DIMENSION_RAW=$(parse_field "维度")
+          DIMENSION=$(echo "$DIMENSION_RAW" | grep -oP '(?<=\().*(?=\))' || echo "$DIMENSION_RAW")
+          NOTE=$(parse_field "备注" || true)
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+          echo "x=$X" >> $GITHUB_OUTPUT
+          echo "y=$Y" >> $GITHUB_OUTPUT
+          echo "z=$Z" >> $GITHUB_OUTPUT
+          echo "dimension=$DIMENSION" >> $GITHUB_OUTPUT
+          echo "note=$NOTE" >> $GITHUB_OUTPUT
+
+      - name: 模拟 — 评论并关闭
+        if: >
+          steps.review.outputs.result == 'approved' &&
+          steps.mode.outputs.is_try == 'true'
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "🔬 **审核通过 (ci:try) — 模拟完成，未写入数据**
+
+          | 字段 | 值 |
+          |------|-----|
+          | 名称 | ${{ steps.simulate.outputs.name }} |
+          | 坐标 | ${{ steps.simulate.outputs.x }} ${{ steps.simulate.outputs.y }} ${{ steps.simulate.outputs.z }} |
+          | 维度 | ${{ steps.simulate.outputs.dimension }} |
+          | 备注 | ${{ steps.simulate.outputs.note }} |
+
+          审核人: @${{ github.event.comment.user.login }}
+
+          > 调试模式：已跳过真实写入。如需正式提交，请新建不勾选调试选项的 Issue。"
+
+          gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}"
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:approved,ci:processed"
+
+      # ---- 审核通过 + 正常：真实写入 ----
       - name: 检出仓库
-        if: steps.review.outputs.result == 'approved'
+        if: >
+          steps.review.outputs.result == 'approved' &&
+          steps.mode.outputs.is_try == 'false'
         uses: actions/checkout@v4
 
       - name: 审核通过 — 写入
-        if: steps.review.outputs.result == 'approved'
+        if: >
+          steps.review.outputs.result == 'approved' &&
+          steps.mode.outputs.is_try == 'false'
         id: write
         env:
           BODY: ${{ github.event.issue.body }}
@@ -349,7 +402,9 @@ jobs:
           echo "note=$NOTE" >> $GITHUB_OUTPUT
 
       - name: 提交并推送
-        if: steps.review.outputs.result == 'approved'
+        if: >
+          steps.review.outputs.result == 'approved' &&
+          steps.mode.outputs.is_try == 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -360,7 +415,9 @@ jobs:
           git push
 
       - name: 审核通过 — 评论并关闭
-        if: steps.review.outputs.result == 'approved'
+        if: >
+          steps.review.outputs.result == 'approved' &&
+          steps.mode.outputs.is_try == 'false'
         run: |
           gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "✨ **审核通过，坐标已写入主分支**
 
