@@ -36,9 +36,12 @@ jobs:
           echo "hash=$HASH" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: 安装并构建
         run: |
-          npm install -g pnpm
           pnpm install
           pnpm build
 
