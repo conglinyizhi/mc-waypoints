@@ -66,13 +66,13 @@ const ciLabels = [
 
 function searchUrl(label) {
   return repo.value
-    ? `${repo.value}/issues?q=${encodeURIComponent(`label:"${label}"`)}`
+    ? `${repo.value}/issues?q=${encodeURIComponent(`label:${label}`)}`
     : '#'
 }
 
 const searchAllUrl = computed(() => {
   if (!repo.value) return '#'
-  const q = ciLabels.map(l => `label:"${l.name}"`).join(',')
+  const q = ciLabels.map(l => `label:${l.name}`).join(' ')
   return `${repo.value}/issues?q=${encodeURIComponent(q)}`
 })
 </script>
