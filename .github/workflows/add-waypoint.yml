@@ -2,7 +2,7 @@ name: 处理坐标提交
 
 on:
   issues:
-    types: [labeled]
+    types: [opened, labeled]
   issue_comment:
     types: [created]
 
@@ -20,8 +20,10 @@ jobs:
   validate:
     if: >
       vars.CI_DISABLED != 'true' &&
-      github.event.action == 'labeled' &&
-      github.event.label.name == 'ci:add_waypoint' &&
+      (
+        ( github.event.action == 'labeled' && github.event.label.name == 'ci:add_waypoint' ) ||
+        ( github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'ci:add_waypoint') )
+      ) &&
       !contains(github.event.issue.labels.*.name, 'ci:pending') &&
       !contains(github.event.issue.labels.*.name, 'ci:invalid') &&
       !contains(github.event.issue.labels.*.name, 'ci:processed')
