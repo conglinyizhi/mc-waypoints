@@ -41,8 +41,13 @@
         <a :href="searchOpenUrl" target="_blank" class="label-btn label-btn--status">📂 仅未关闭</a>
         <a :href="searchClosedUrl" target="_blank" class="label-btn label-btn--status">📁 仅已关闭</a>
       </div>
-      <a v-if="repo" :href="`${repo}/settings/variables/actions`" target="_blank" class="label-btn label-btn--util">
-        ⚙️ CI 急停设置 (Variables)
+    </div>
+
+    <div v-if="repo" class="about-card">
+      <h2>🛑 CI 控制</h2>
+      <p class="hint">CI_DISABLED=true → 全部停摆；false → 正常运行</p>
+      <a :href="`${repo}/settings/variables/actions`" target="_blank" class="label-btn label-btn--util">
+        ⚙️ 打开 Variables 设置
       </a>
     </div>
   </div>
@@ -155,10 +160,9 @@ const searchClosedUrl = computed(() => {
 }
 .label-btn--util {
   display: inline-block;
-  margin-top: 0.5rem;
   border-color: #d97706;
   color: #f59e0b;
-  font-size: 0.78rem;
-  padding: 0.3rem 0.7rem;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.8rem;
 }
 </style>
