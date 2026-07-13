@@ -19,6 +19,7 @@ jobs:
   # ============================================================
   validate:
     if: >
+      vars.CI_DISABLED != 'true' &&
       github.event.action == 'labeled' &&
       github.event.label.name == 'ci:add_waypoint' &&
       !contains(github.event.issue.labels.*.name, 'ci:pending') &&
@@ -193,6 +194,7 @@ jobs:
   # ============================================================
   review:
     if: >
+      vars.CI_DISABLED != 'true' &&
       github.event.action == 'created' &&
       contains(github.event.issue.labels.*.name, 'ci:pending') &&
       (
