@@ -186,7 +186,7 @@ jobs:
           - **触发者**: @${{ github.actor }}
 
           非预期的技术错误，请检查 [运行日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})。" \
-            --label "bug,ci"
+            --label "bug"
 
   # ============================================================
   # 阶段 2：审核
@@ -306,4 +306,4 @@ jobs:
           - **触发者**: @${{ github.actor }}
 
           非预期的技术错误，请检查 [运行日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})。" \
-            --label "bug,ci"
+            --label "bug"
