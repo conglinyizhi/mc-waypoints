@@ -3,6 +3,8 @@ name: 处理坐标提交
 on:
   issues:
     types: [labeled]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
@@ -10,14 +12,15 @@ permissions:
 
 jobs:
   # ============================================================
-  # 阶段 1：校验（ci:add_waypoint 触发）
+  # 阶段 1：校验（ci:add_waypoint 标签触发）
   # ============================================================
   validate:
     if: >
+      github.event.action == 'labeled' &&
       github.event.label.name == 'ci:add_waypoint' &&
-      !contains(github.event.issue.labels.*.name, 'ci:processed') &&
+      !contains(github.event.issue.labels.*.name, 'ci:pending') &&
       !contains(github.event.issue.labels.*.name, 'ci:invalid') &&
-      !contains(github.event.issue.labels.*.name, 'ci:pending')
+      !contains(github.event.issue.labels.*.name, 'ci:processed')
     runs-on: ubuntu-latest
 
     steps:
@@ -98,7 +101,6 @@ jobs:
           ${{ steps.parse.outputs.errors }}"
 
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:invalid"
-          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --remove-label "ci:add_waypoint"
 
       - name: 校验通过 — 标记等待审核
         if: steps.parse.outputs.valid == 'true'
@@ -115,25 +117,48 @@ jobs:
           | 备注 | ${{ steps.parse.outputs.note }} |
           | 提交者 | @${{ github.event.issue.user.login }} |
 
-          > 请仓库维护者审核后添加 \`ci:approved\` 标签以完成写入。"
+          > 请维护者回复 \`通过\` / \`ok\` 确认写入，或 \`不通过\` / \`fail\` 拒绝。"
 
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:pending"
-          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --remove-label "ci:add_waypoint"
 
   # ============================================================
-  # 阶段 2：写入（ci:approved 触发）
+  # 阶段 2：审核（维护者评论触发）
   # ============================================================
-  commit:
+  review:
     if: >
-      github.event.label.name == 'ci:approved' &&
-      contains(github.event.issue.labels.*.name, 'ci:pending')
+      github.event.action == 'created' &&
+      contains(github.event.issue.labels.*.name, 'ci:pending') &&
+      (
+        contains(github.event.comment.author_association, 'OWNER') ||
+        contains(github.event.comment.author_association, 'COLLABORATOR') ||
+        contains(github.event.comment.author_association, 'MEMBER')
+      )
     runs-on: ubuntu-latest
 
     steps:
-      - name: 检出仓库
+      - name: 判断审核结果
+        id: review
+        env:
+          COMMENT: ${{ github.event.comment.body }}
+        run: |
+          # 转换为小写便于匹配
+          BODY_LOWER=$(echo "$COMMENT" | tr '[:upper:]' '[:lower:]')
+
+          if echo "$BODY_LOWER" | grep -qE '通过|ok'; then
+            echo "result=approved" >> $GITHUB_OUTPUT
+          elif echo "$BODY_LOWER" | grep -qE '不通过|fail|no|拒绝|reject'; then
+            echo "result=rejected" >> $GITHUB_OUTPUT
+          else
+            echo "结果: ignored（未匹配审核关键词）"
+            echo "result=ignored" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 审核通过 — 标记并写入
+        if: steps.review.outputs.result == 'approved'
         uses: actions/checkout@v4
 
-      - name: 解析并写入
+      - name: 解析并写入数据
+        if: steps.review.outputs.result == 'approved'
         id: write
         env:
           BODY: ${{ github.event.issue.body }}
@@ -183,6 +208,7 @@ jobs:
           echo "note=$NOTE" >> $GITHUB_OUTPUT
 
       - name: 提交并推送
+        if: steps.review.outputs.result == 'approved'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -192,11 +218,12 @@ jobs:
           Closes #${{ github.event.issue.number }}"
           git push
 
-      - name: 评论并关闭
+      - name: 审核通过 — 评论并关闭
+        if: steps.review.outputs.result == 'approved'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "✨ **坐标已写入主分支并部署**
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "✨ **审核通过，坐标已写入主分支**
 
           | 字段 | 值 |
           |------|-----|
@@ -204,8 +231,21 @@ jobs:
           | 坐标 | ${{ steps.write.outputs.x }} ${{ steps.write.outputs.y }} ${{ steps.write.outputs.z }} |
           | 维度 | ${{ steps.write.outputs.dimension }} |
           | 备注 | ${{ steps.write.outputs.note }} |
-          | 贡献者 | @${{ github.event.issue.user.login }} |"
+
+          审核人: @${{ github.event.comment.user.login }}"
 
           gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}"
-          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --remove-label "ci:pending"
-          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:processed"
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:approved,ci:processed"
+
+      - name: 审核拒绝 — 评论并标记
+        if: steps.review.outputs.result == 'rejected'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "🚫 **审核未通过**
+
+          审核人: @${{ github.event.comment.user.login }}
+
+          请根据反馈修正后重新提交 Issue。"
+
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:rejected"
