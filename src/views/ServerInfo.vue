@@ -2,6 +2,7 @@
   <div>
     <div class="todo-header">
       <h2>📋 待办事项</h2>
+      <p class="todo-hint">💡 数据仅保存在当前浏览器中，不会同步到服务器。换设备或清除浏览器数据后需重新添加。</p>
       <div class="todo-actions">
         <input
           v-model="newTodo"
@@ -101,6 +102,7 @@ function remove(i) {
   margin-bottom: 1rem;
 }
 .todo-header h2 { font-size: 1.1rem; color: #fff; }
+.todo-hint { color: #666; font-size: 0.78rem; margin-top: 0.3rem; }
 
 .todo-actions { display: flex; gap: 0.4rem; }
 .todo-input {

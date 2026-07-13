@@ -15,19 +15,45 @@
 ## 分支结构
 
 ```
-main  ── 源代码 + CI 脚本
+main  ── 源代码 + CI 脚本 + 配置文件 (config.json)
 data  ── waypoints.jsonl（坐标数据，CI 唯一写入目标）
 ```
 
-本地开发只需 `main` 分支，永远不会和 CI 数据写入冲突。
+- `main` 分支**不包含** `waypoints.jsonl`（已 gitignore），本地开发只操作此分支
+- `data` 分支**仅包含** `public/data/waypoints.jsonl`，由 CI 自动维护
+- 部署时 `deploy.yml` 自动从两个分支合并代码+数据，构建并推送到 GitHub Pages
+- 本地开发 `main` 永远不会和 CI 数据写入冲突
+- 示例坐标数据在 `public/data/waypoints.example.jsonl`，供格式参考
+
+### 待办事项说明
+
+待办事项页面（`#/server`）是纯本地功能——数据存储在浏览器 localStorage 中，**不会同步到服务器**。换设备、换浏览器、或清除浏览器数据后待办会丢失。
 
 ## 部署（GitHub Pages + Actions）
 
-### 1. 启用 GitHub Pages
+> 整个部署流程由 `.github/workflows/deploy.yml` 自动化，无需手动构建。
 
-仓库 **Settings → Pages → Source** 选择 **GitHub Actions**。
+### 前置条件
 
-### 2. 配置 `public/data/config.json`
+1. **启用 GitHub Pages**：仓库 Settings → Pages → Source → **GitHub Actions**
+2. **CI 写权限**：Settings → Actions → General → Workflow permissions → **Read and write permissions**
+3. **初始化 data 分支**：
+   ```bash
+   git checkout --orphan data
+   mkdir -p public/data
+   touch public/data/waypoints.jsonl
+   git add public/data/waypoints.jsonl
+   git commit -m "初始化数据分支"
+   git push origin data
+   ```
+
+### 部署触发
+
+- push `main` → 代码变更时自动部署
+- push `data` → CI 写入坐标后自动部署
+- 手动：`gh workflow run deploy.yml`
+
+### 配置 `public/data/config.json`
 
 ```json
 {
@@ -41,11 +67,9 @@ data  ── waypoints.jsonl（坐标数据，CI 唯一写入目标）
 }
 ```
 
-### 3. 配置 CI 权限
+> `todos` 数组中的项会自动合并到待办页面的本地数据中（仅新增，不覆盖已有）。
 
-**Settings → Actions → General → Workflow permissions** 设为 **Read and write permissions**。
-
-### 4. 创建 CI 标签
+### 创建 CI 标签
 
 在 Issues 页面创建以下标签（或运行 `gh label create`）：
 
@@ -59,20 +83,10 @@ data  ── waypoints.jsonl（坐标数据，CI 唯一写入目标）
 | `ci:invalid` | 校验失败 |
 | `ci:rejected` | 审核拒绝 |
 
-### 5. 设置急停变量
+### 设置急停变量
 
 **Settings → Secrets and variables → Actions → Variables** 新建 `CI_DISABLED`，值设为 `false`。需要暂停 CI 时改为 `true` 即可。
 
-### 6. 初始化 data 分支
-
-```bash
-git checkout --orphan data
-mkdir -p public/data
-echo '' > public/data/waypoints.jsonl
-git add public/data/waypoints.jsonl
-git commit -m "初始化数据分支"
-git push origin data
-```
 
 ## CI 流程
 
