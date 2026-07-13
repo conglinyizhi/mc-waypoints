@@ -37,6 +37,10 @@
       <a :href="searchAllUrl" target="_blank" class="label-btn label-btn--all">
         📋 查看全部 CI Issue
       </a>
+      <div class="status-btns">
+        <a :href="searchOpenUrl" target="_blank" class="label-btn label-btn--status">📂 仅未关闭</a>
+        <a :href="searchClosedUrl" target="_blank" class="label-btn label-btn--status">📁 仅已关闭</a>
+      </div>
     </div>
   </div>
 </template>
@@ -73,6 +77,18 @@ function searchUrl(label) {
 const searchAllUrl = computed(() => {
   if (!repo.value) return '#'
   const q = ciLabels.map(l => `label:${l.name}`).join(' ')
+  return `${repo.value}/issues?q=${encodeURIComponent(q)}`
+})
+
+const searchOpenUrl = computed(() => {
+  if (!repo.value) return '#'
+  const q = `is:open ${ciLabels.map(l => `label:${l.name}`).join(' ')}`
+  return `${repo.value}/issues?q=${encodeURIComponent(q)}`
+})
+
+const searchClosedUrl = computed(() => {
+  if (!repo.value) return '#'
+  const q = `is:closed ${ciLabels.map(l => `label:${l.name}`).join(' ')}`
   return `${repo.value}/issues?q=${encodeURIComponent(q)}`
 })
 </script>
@@ -121,5 +137,17 @@ const searchAllUrl = computed(() => {
   color: #ccc;
   font-size: 0.82rem;
   padding: 0.4rem 0.8rem;
+}
+
+.status-btns {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.label-btn--status {
+  border-color: #555;
+  color: #aaa;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.7rem;
 }
 </style>
