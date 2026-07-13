@@ -6,12 +6,8 @@ on:
   issue_comment:
     types: [created]
 
-permissions:
-  contents: write
-  issues: write
 
-env:
-  GH_TOKEN: ${{ github.token }}
+# 权限在每个 job 中单独设置
 
 jobs:
   # ============================================================
@@ -27,6 +23,11 @@ jobs:
       !contains(github.event.issue.labels.*.name, 'ci:pending') &&
       !contains(github.event.issue.labels.*.name, 'ci:invalid') &&
       !contains(github.event.issue.labels.*.name, 'ci:processed')
+    permissions:
+      contents: write
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
     runs-on: ubuntu-latest
 
     steps:
@@ -214,6 +215,11 @@ jobs:
         contains(github.event.comment.author_association, 'COLLABORATOR') ||
         contains(github.event.comment.author_association, 'MEMBER')
       )
+    permissions:
+      contents: write
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
     runs-on: ubuntu-latest
 
     steps:
