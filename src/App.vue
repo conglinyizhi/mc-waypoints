@@ -43,7 +43,8 @@ const tabs = [
   { to: '/submit', label: '➕ 提交' },
   { to: '/server', label: '📋 待办' },
   { to: '/announcement', label: '📢 公告' },
-  { to: '/converter', label: '🔢 下界换算' }
+  { to: '/converter', label: '🔢 下界换算' },
+  { to: '/about', label: 'ℹ️ 关于' }
 ]
 
 const { waypoints, config, loading, error, reload } = useDataFetch()

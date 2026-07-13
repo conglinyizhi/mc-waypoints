@@ -3,10 +3,15 @@ import vue from '@vitejs/plugin-vue'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { execSync } from 'node:child_process'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = resolve(__dirname, 'public/data')
 const WAYPOINTS_PATH = resolve(DATA_DIR, 'waypoints.jsonl')
+
+// 从 git 获取 commit hash 作为版本号
+let gitHash = 'unknown'
+try { gitHash = execSync('git rev-parse --short HEAD', { cwd: __dirname }).toString().trim() } catch {}
 
 // 开发中间件：JSONL CRUD API
 function waypointsMiddleware(req, res, next) {
@@ -133,6 +138,9 @@ function waypointsMiddleware(req, res, next) {
 }
 
 export default defineConfig({
+  define: {
+    __GIT_HASH__: JSON.stringify(gitHash)
+  },
   plugins: [
     vue(),
     {
