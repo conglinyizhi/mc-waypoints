@@ -9,9 +9,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = resolve(__dirname, 'public/data')
 const WAYPOINTS_PATH = resolve(DATA_DIR, 'waypoints.jsonl')
 
-// 从 git 获取 commit hash 作为版本号
+// 从 git 获取版本号：优先 tag，其次 commit hash
 let gitHash = 'unknown'
-try { gitHash = execSync('git rev-parse --short HEAD', { cwd: __dirname }).toString().trim() } catch {}
+try { gitHash = execSync('git describe --tags --always', { cwd: __dirname }).toString().trim() } catch {}
 
 // 开发中间件：JSONL CRUD API
 function waypointsMiddleware(req, res, next) {

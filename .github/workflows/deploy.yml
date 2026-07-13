@@ -1,0 +1,52 @@
+name: 构建部署
+
+on:
+  push:
+    branches: [main, data]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: 检出代码 (main)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: 获取数据文件 (data 分支)
+        run: |
+          git fetch origin data
+          git show origin/data:public/data/waypoints.jsonl > public/data/waypoints.jsonl 2>/dev/null || touch public/data/waypoints.jsonl
+
+      - name: 获取版本号
+        id: version
+        run: |
+          HASH=$(git rev-parse --short HEAD)
+          TAG=$(git describe --tags --always 2>/dev/null || echo "v0.0.0")
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: 安装并构建
+        run: |
+          npm install -g pnpm
+          pnpm install
+          pnpm build
+
+      - name: 上传 Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: 部署
+        id: deploy
+        uses: actions/deploy-pages@v4

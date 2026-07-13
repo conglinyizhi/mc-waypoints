@@ -30,7 +30,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 解析并校验
+      - name: 获取数据文件
+        run: |
+          git fetch origin data
+          git show origin/data:public/data/waypoints.jsonl > public/data/waypoints.jsonl 2>/dev/null || touch public/data/waypoints.jsonl
         id: parse
         env:
           BODY: ${{ github.event.issue.body }}
@@ -87,11 +90,18 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f public/data/waypoints.jsonl
+
+          # 保存修改，切到 data 分支推送
+          cp public/data/waypoints.jsonl /tmp/waypoints.jsonl
+          git fetch origin data
+          git checkout data
+          cp /tmp/waypoints.jsonl public/data/waypoints.jsonl
+          git add public/data/waypoints.jsonl
           git commit -m "添加坐标: ${{ steps.parse.outputs.name }} (${{ steps.parse.outputs.x }}, ${{ steps.parse.outputs.y }}, ${{ steps.parse.outputs.z }}) [${{ steps.parse.outputs.dimension }}]
 
-          Closes #${{ github.event.issue.number }}"
-          git push
+          Refs: #${{ github.event.issue.number }}"
+          git push origin data
+          git checkout main
 
       - name: 直接写入完成
         if: >
@@ -232,6 +242,12 @@ jobs:
       - uses: actions/checkout@v4
         if: steps.review.outputs.result == 'approved'
 
+      - name: 获取数据文件
+        if: steps.review.outputs.result == 'approved'
+        run: |
+          git fetch origin data
+          git show origin/data:public/data/waypoints.jsonl > public/data/waypoints.jsonl 2>/dev/null || touch public/data/waypoints.jsonl
+
       - name: 审核通过 — 解析并写入
         if: steps.review.outputs.result == 'approved'
         id: write
@@ -271,11 +287,17 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f public/data/waypoints.jsonl
+
+          cp public/data/waypoints.jsonl /tmp/waypoints.jsonl
+          git fetch origin data
+          git checkout data
+          cp /tmp/waypoints.jsonl public/data/waypoints.jsonl
+          git add public/data/waypoints.jsonl
           git commit -m "添加坐标: ${{ steps.write.outputs.name }} (${{ steps.write.outputs.x }}, ${{ steps.write.outputs.y }}, ${{ steps.write.outputs.z }}) [${{ steps.write.outputs.dimension }}]
 
-          Closes #${{ github.event.issue.number }}"
-          git push
+          Refs: #${{ github.event.issue.number }}"
+          git push origin data
+          git checkout main
 
       - name: 评论并关闭
         if: steps.review.outputs.result == 'approved'
