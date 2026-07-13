@@ -43,3 +43,11 @@ body:
       label: 备注
       description: 选填，补充说明（附近地标、注意事项等）
       placeholder: 橡木小屋，旁边有村庄和铁匠铺
+
+  - type: checkboxes
+    id: debug
+    attributes:
+      label: 调试选项（仅维护者）
+      description: 维护者勾选此项将进入模拟流程，校验但不写入数据
+      options:
+        - label: 模拟流程，不写入数据 (ci:try)
