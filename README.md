@@ -1,5 +1,7 @@
 # ⛏ Minecraft 坐标簿
 
+[![Demo](https://img.shields.io/badge/demo-GitHub%20Pages-222?logo=github)](https://conglinyizhi.github.io/mc-waypoints/)
+
 多人 Minecraft 服务器的坐标点记录与共享工具。纯静态站点，通过 GitHub Issues 提交坐标，CI 自动校验审核后写入，GitHub Pages 自动部署。
 
 ## 功能
