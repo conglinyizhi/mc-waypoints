@@ -381,30 +381,47 @@ function onMenuDetail(wp) {
 
 @include shared.filter-btn-block;
 
-/* ===== 表格 ===== */
+/* ===== 表格 =====
+ * 名称/坐标/操作按内容收缩（width:1% + nowrap），备注吃剩余宽度，
+ * 避免 table 100% 时列间出现大块空白。
+ */
 .table-wrap { overflow-x: auto; }
-.waypoint-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.waypoint-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  table-layout: auto;
+}
 .waypoint-table th {
   text-align: left;
-  padding: 0.55rem 0.6rem;
+  padding: 0.45rem 0.5rem;
   border-bottom: 2px solid $border;
   color: $text-dim;
   font-weight: 600;
   white-space: nowrap;
 }
 .waypoint-table td {
-  padding: 0.5rem 0.6rem;
+  padding: 0.42rem 0.5rem;
   border-bottom: 1px solid $bg-elevated;
   white-space: nowrap;
+  vertical-align: middle;
 }
 .waypoint-table tbody tr:hover { background: $bg-elevated; }
+
+/* 收缩列：贴内容 */
+.col-name,
+.col-coords,
+.col-actions {
+  width: 1%;
+  white-space: nowrap;
+}
 
 .col-name { font-weight: 600; color: $text-bright; }
 .name-with-dim {
   display: inline-flex;
   align-items: center;
   gap: 0.28rem;
-  max-width: 100%;
+  max-width: 12rem;
 }
 .dim-dot { flex-shrink: 0; font-size: 0.85em; line-height: 1; }
 .col-coords code {
@@ -414,9 +431,13 @@ function onMenuDetail(wp) {
   background: $coords-bg;
   padding: 0.1rem 0.35rem;
   border-radius: 3px;
+  white-space: nowrap;
 }
+
+/* 备注：吃掉剩余横向空间，信息密度更高 */
 .col-note {
-  max-width: 280px;
+  width: auto;
+  max-width: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -424,6 +445,9 @@ function onMenuDetail(wp) {
 }
 .note-text {
   color: $text-soft;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .note-placeholder {
   color: $text-ghost;
@@ -432,11 +456,12 @@ function onMenuDetail(wp) {
 .col-actions {
   position: relative;
   display: flex;
-  gap: 0.3rem;
+  gap: 0.25rem;
   flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
   overflow: visible;
+  padding-left: 0.35rem;
 }
 .actions-inline {
   display: flex;
@@ -479,7 +504,7 @@ function onMenuDetail(wp) {
 @media (max-width: 720px) {
   .actions-inline { display: none; }
   .actions-compact { display: block; }
-  .col-note { max-width: 120px; }
+  .name-with-dim { max-width: 9rem; }
 }
 
 /* ===== 维度着色（名称前缀） ===== */
