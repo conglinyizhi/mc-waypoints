@@ -66,6 +66,25 @@ function isMaintainer(authorAssoc) {
 }
 
 /**
+ * 清洗 GitHub Issue Form 字段：
+ * 未填时表单会渲染为 `_No response_`，一律视为空字符串。
+ */
+function cleanField(v) {
+  let s = String(v ?? '').trim()
+  if (!s) return ''
+  // 整段就是占位
+  if (/^_?No\s*response_?$/i.test(s)) return ''
+  // 偶发前后缀空白/换行已 trim；再剥一层 markdown 斜体包裹
+  if (/^_No\s*response_$/i.test(s.replace(/\s+/g, ' '))) return ''
+  return s
+}
+
+/** 空字段 / GitHub 未填占位 */
+function emptyField(v) {
+  return cleanField(v) === ''
+}
+
+/**
  * 归一化维度字段
  * 兼容：overworld | 主世界 (overworld) | 主世界 | nether/下界/地狱 | end/末地
  */
@@ -90,12 +109,10 @@ function doParse() {
   const body = process.env.BODY || ''
   const authorAssoc = process.env.AUTHOR_ASSOC || ''
 
-  const name = parseField(body, '名称')
-  const coordsRaw = parseField(body, '坐标')
-  const dimensionRaw = parseField(body, '维度')
-  let note = parseField(body, '备注')
-  // GitHub Issue Form 未填字段会渲染为 _No response_
-  if (/^_?No response_?$/i.test(note.trim())) note = ''
+  const name = cleanField(parseField(body, '名称'))
+  const coordsRaw = cleanField(parseField(body, '坐标'))
+  const dimensionRaw = cleanField(parseField(body, '维度'))
+  const note = cleanField(parseField(body, '备注'))
 
   // 维度兼容纯键与历史中文选项
   const dimension = normalizeDimension(dimensionRaw)
@@ -193,9 +210,12 @@ function doWrite(jsonlPath, recordJson) {
   const dir = dirname(jsonlPath)
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
 
-  const line = (typeof recordJson === 'string')
-    ? JSON.stringify(JSON.parse(recordJson))
-    : JSON.stringify(recordJson)
+  const rec = typeof recordJson === 'string' ? JSON.parse(recordJson) : { ...recordJson }
+  // 写入前把 GitHub 占位符等空内容归一
+  if ('note' in rec) rec.note = cleanField(rec.note)
+  if ('name' in rec) rec.name = cleanField(rec.name)
+  if ('category' in rec) rec.category = cleanField(rec.category)
+  const line = JSON.stringify(rec)
 
   const existing = existsSync(jsonlPath) ? readFileSync(jsonlPath, 'utf-8') : ''
   const newContent = existing.trimEnd()
@@ -206,14 +226,6 @@ function doWrite(jsonlPath, recordJson) {
   console.log(JSON.stringify({ ok: true }))
 }
 
-
-/** 空字段 / GitHub 未填占位 */
-function emptyField(v) {
-  const s = String(v || '').trim()
-  if (!s) return true
-  if (/^_?No response_?$/i.test(s)) return true
-  return false
-}
 
 /** 解析坐标，失败返回 { error }，成功 { x,y,z } */
 function mustCoords(raw, label = '坐标') {
@@ -229,30 +241,23 @@ function doParseReport() {
   const body = process.env.BODY || ''
   const authorAssoc = process.env.AUTHOR_ASSOC || ''
 
-  const waypointId = parseField(body, '记录 ID')
-  const currentName = parseField(body, '当前名称')
-  const currentCoords = parseField(body, '当前坐标')
-  const currentDimension = normalizeDimension(parseField(body, '当前维度'))
-  let currentNote = parseField(body, '当前备注')
-  if (emptyField(currentNote)) currentNote = ''
+  const waypointId = cleanField(parseField(body, '记录 ID'))
+  const currentName = cleanField(parseField(body, '当前名称'))
+  const currentCoords = cleanField(parseField(body, '当前坐标'))
+  const currentDimension = normalizeDimension(cleanField(parseField(body, '当前维度')))
+  const currentNote = cleanField(parseField(body, '当前备注'))
 
-  let action = parseField(body, '操作类型').trim().toLowerCase()
-  if (emptyField(action)) action = 'update'
+  let action = cleanField(parseField(body, '操作类型')).toLowerCase()
+  if (!action) action = 'update'
   // dropdown 可能带说明文字，只取首词
   if (action.startsWith('delete')) action = 'delete'
   else if (action.startsWith('update')) action = 'update'
 
-  let newName = parseField(body, '新名称')
-  let newCoordsRaw = parseField(body, '新坐标')
-  let newDimensionRaw = parseField(body, '新维度')
-  let newNote = parseField(body, '新备注')
-  let detail = parseField(body, '问题说明')
-
-  if (emptyField(newName)) newName = ''
-  if (emptyField(newCoordsRaw)) newCoordsRaw = ''
-  if (emptyField(newDimensionRaw)) newDimensionRaw = ''
-  if (emptyField(newNote)) newNote = ''
-  if (emptyField(detail)) detail = ''
+  let newName = cleanField(parseField(body, '新名称'))
+  let newCoordsRaw = cleanField(parseField(body, '新坐标'))
+  let newDimensionRaw = cleanField(parseField(body, '新维度'))
+  let newNote = cleanField(parseField(body, '新备注'))
+  let detail = cleanField(parseField(body, '问题说明'))
 
   const debug = /\[x\].*ci:review/i.test(body)
   const errors = []
@@ -362,12 +367,12 @@ function doPatch(jsonlPath, patchJson) {
       continue
     }
     const next = { ...obj }
-    if (patch.name != null) next.name = patch.name
+    if (patch.name != null) next.name = cleanField(patch.name)
     if (patch.x != null) next.x = patch.x
     if (patch.y != null) next.y = patch.y
     if (patch.z != null) next.z = patch.z
     if (patch.dimension != null) next.dimension = patch.dimension
-    if (patch.note != null) next.note = patch.note
+    if (patch.note != null) next.note = cleanField(patch.note)
     next.updatedAt = new Date().toISOString()
     updated = next
     out.push(JSON.stringify(next))

@@ -50,7 +50,10 @@
             <td class="col-coords">
               <code>{{ wp.x }} / {{ wp.y }} / {{ wp.z }}</code>
             </td>
-            <td class="col-note">{{ wp.note || '—' }}</td>
+            <td class="col-note">
+              <span v-if="hasNote(wp.note)" class="note-text">{{ wp.note }}</span>
+              <span v-else class="note-placeholder" title="无备注">—</span>
+            </td>
             <td class="col-contributor">{{ wp.contributor || '—' }}</td>
             <td class="col-actions">
               <!-- 宽屏：三按钮横排 -->
@@ -73,8 +76,7 @@
                   data-name="report-waypoint-btn"
                   class="copy-btn report-btn"
                   title="发起报错 Issue"
-                  :disabled="!repoConfigured"
-                  @click="openReportIssue(wp)"
+                                    @click="openReportIssue(wp)"
                 >⚠️ 报错</button>
               </div>
 
@@ -227,6 +229,15 @@ const filtered = computed(() => {
 })
 
 // --- 辅助 ---
+
+/** 备注是否有真实内容（排除空串与 GitHub 表单占位 _No response_） */
+function hasNote(note) {
+  const s = String(note ?? '').trim()
+  if (!s) return false
+  if (/^_?No\s*response_?$/i.test(s)) return false
+  return true
+}
+
 function dimLabel(d) {
   const map = {
     overworld: '主世界',
@@ -337,6 +348,13 @@ function onMenuReport(wp) {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: $text-soft;
+}
+.note-text {
+  color: $text-soft;
+}
+.note-placeholder {
+  color: $text-ghost;
+  user-select: none;
 }
 .col-contributor { color: $text-faint; }
 .col-actions {
