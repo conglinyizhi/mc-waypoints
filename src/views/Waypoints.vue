@@ -32,7 +32,6 @@
             <th>[维度]名称</th>
             <th>坐标 (X / Y / Z)</th>
             <th>备注</th>
-            <th>贡献者</th>
             <th>操作</th>
           </tr>
         </thead>
@@ -54,7 +53,6 @@
               <span v-if="hasNote(wp.note)" class="note-text">{{ wp.note }}</span>
               <span v-else class="note-placeholder" title="无备注">—</span>
             </td>
-            <td class="col-contributor">{{ wp.contributor || '—' }}</td>
             <td class="col-actions">
               <!-- 宽屏：三按钮横排 -->
               <div class="actions-inline" data-name="actions-inline">
@@ -80,11 +78,10 @@
                 >ℹ️</button>
               </div>
 
-              <!-- 窄屏：… 折叠菜单 -->
+              <!-- 窄屏：… 折叠菜单（点击开关；点外部关闭；不用 mouseleave，避免移入菜单时误关） -->
               <div
                 class="actions-compact"
                 data-name="actions-compact"
-                @mouseleave="closeActionsMenu"
               >
                 <button
                   type="button"
@@ -92,38 +89,8 @@
                   class="copy-btn more-btn"
                   title="更多操作"
                   :aria-expanded="openMenuId === wp.id"
-                  @click.stop="toggleActionsMenu(wp.id)"
+                  @click.stop="toggleActionsMenu(wp.id, $event)"
                 >⋯</button>
-                <div
-                  v-if="openMenuId === wp.id"
-                  class="actions-dropdown"
-                  data-name="actions-dropdown"
-                  role="menu"
-                >
-                  <button
-                    type="button"
-                    role="menuitem"
-                    data-name="copy-coord-btn"
-                    class="copy-btn dropdown-item"
-                    :class="{ 'copy-btn--ok': copiedId === `${wp.id}-coord` }"
-                    @click="onMenuCopy(`${wp.x} ${wp.y} ${wp.z}`, `${wp.id}-coord`)"
-                  >{{ copiedId === `${wp.id}-coord` ? '✓ 已复制' : '📋 复制坐标' }}</button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    data-name="copy-tp-btn"
-                    class="copy-btn dropdown-item"
-                    :class="{ 'copy-btn--ok': copiedId === `${wp.id}-tp` }"
-                    @click="onMenuCopy(`/tp ${wp.x} ${wp.y} ${wp.z}`, `${wp.id}-tp`)"
-                  >{{ copiedId === `${wp.id}-tp` ? '✓ 已复制' : '/tp 复制指令' }}</button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    data-name="detail-waypoint-btn"
-                    class="copy-btn detail-btn dropdown-item"
-                    @click="onMenuDetail(wp)"
-                  >ℹ️ 详情</button>
-                </div>
               </div>
             </td>
           </tr>
@@ -136,6 +103,42 @@
         <p v-else>📭 还没有坐标点</p>
       </div>
     </div>
+
+    <!-- 操作菜单：挂到 body，避免被 table overflow 裁切 -->
+    <Teleport to="body">
+      <div
+        v-if="openMenuId && openMenuWp"
+        class="actions-dropdown actions-dropdown--portal"
+        data-name="actions-dropdown"
+        role="menu"
+        :style="menuStyle"
+        @click.stop
+      >
+        <button
+          type="button"
+          role="menuitem"
+          data-name="copy-coord-btn"
+          class="copy-btn dropdown-item"
+          :class="{ 'copy-btn--ok': copiedId === `${openMenuWp.id}-coord` }"
+          @click="onMenuCopy(`${openMenuWp.x} ${openMenuWp.y} ${openMenuWp.z}`, `${openMenuWp.id}-coord`)"
+        >{{ copiedId === `${openMenuWp.id}-coord` ? '✓ 已复制' : '📋 复制坐标' }}</button>
+        <button
+          type="button"
+          role="menuitem"
+          data-name="copy-tp-btn"
+          class="copy-btn dropdown-item"
+          :class="{ 'copy-btn--ok': copiedId === `${openMenuWp.id}-tp` }"
+          @click="onMenuCopy(`/tp ${openMenuWp.x} ${openMenuWp.y} ${openMenuWp.z}`, `${openMenuWp.id}-tp`)"
+        >{{ copiedId === `${openMenuWp.id}-tp` ? '✓ 已复制' : '/tp 复制指令' }}</button>
+        <button
+          type="button"
+          role="menuitem"
+          data-name="detail-waypoint-btn"
+          class="copy-btn detail-btn dropdown-item"
+          @click="onMenuDetail(openMenuWp)"
+        >ℹ️ 详情</button>
+      </div>
+    </Teleport>
 
     <!-- 底部提交链接 -->
     <div class="footer-bar">
@@ -156,7 +159,7 @@
 </template>
 
 <script setup>
-import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
+import { ref, computed, inject, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useClipboard } from '../composables/useClipboard.js'
 
@@ -165,33 +168,103 @@ const config = inject('config')
 const router = useRouter()
 const { copy, copiedId } = useClipboard()
 
-const repoConfigured = computed(() => {
-  return !!(config.value?.github_repo && config.value.github_repo !== 'yourname/yourrepo')
-})
-
-// 窄屏操作菜单：同一时间只开一行
+// 窄屏操作菜单：同一时间只开一行；Teleport + fixed，避免 overflow 裁切 / mouseleave 误关
 const openMenuId = ref(null)
+const menuStyle = ref({})
 
-function toggleActionsMenu(id) {
-  openMenuId.value = openMenuId.value === id ? null : id
-}
+const openMenuWp = computed(() => {
+  const id = openMenuId.value
+  if (!id) return null
+  return (waypoints.value || []).find(w => String(w.id) === String(id)) || null
+})
 
 function closeActionsMenu() {
   openMenuId.value = null
+  menuStyle.value = {}
+}
+
+function placeMenu(anchorEl) {
+  if (!anchorEl || typeof anchorEl.getBoundingClientRect !== 'function') return
+  const rect = anchorEl.getBoundingClientRect()
+  const menuEl = document.querySelector('[data-name="actions-dropdown"]')
+  const menuW = menuEl?.offsetWidth || 168
+  const menuH = menuEl?.offsetHeight || 140
+  const gap = 6
+  const pad = 8
+  const spaceBelow = window.innerHeight - rect.bottom
+  const openUp = spaceBelow < menuH + gap + pad
+
+  let top
+  if (openUp) {
+    top = Math.max(pad, rect.top - gap - menuH)
+  } else {
+    top = rect.bottom + gap
+    if (top + menuH > window.innerHeight - pad) {
+      top = Math.max(pad, window.innerHeight - menuH - pad)
+    }
+  }
+
+  // 右对齐按钮右缘，并钳制在视口内
+  let left = rect.right - menuW
+  left = Math.min(Math.max(pad, left), window.innerWidth - menuW - pad)
+
+  menuStyle.value = {
+    position: 'fixed',
+    top: `${Math.round(top)}px`,
+    left: `${Math.round(left)}px`,
+    right: 'auto',
+    visibility: 'visible',
+    zIndex: 300
+  }
+}
+
+function toggleActionsMenu(id, event) {
+  if (openMenuId.value === id) {
+    closeActionsMenu()
+    return
+  }
+  openMenuId.value = id
+  const anchor = event?.currentTarget
+  // 先落到锚点下方再测真实尺寸，必要时翻到上方
+  menuStyle.value = {
+    position: 'fixed',
+    top: '-9999px',
+    left: '0',
+    visibility: 'hidden',
+    zIndex: 300
+  }
+  nextTick(() => {
+    placeMenu(anchor)
+    // 第二次确保用最终尺寸（字体/换行后）
+    nextTick(() => placeMenu(anchor))
+  })
 }
 
 function onDocPointerDown(e) {
   if (!openMenuId.value) return
   const el = e.target
-  if (el && typeof el.closest === 'function' && el.closest('[data-name="actions-compact"]')) return
+  if (el && typeof el.closest === 'function') {
+    if (el.closest('[data-name="actions-compact"]')) return
+    if (el.closest('[data-name="actions-dropdown"]')) return
+  }
+  closeActionsMenu()
+}
+
+function onWinReposition() {
+  if (!openMenuId.value) return
+  // 滚动/缩放时关掉，避免错位（比错误悬停更可预期）
   closeActionsMenu()
 }
 
 onMounted(() => {
   document.addEventListener('pointerdown', onDocPointerDown)
+  window.addEventListener('resize', onWinReposition)
+  window.addEventListener('scroll', onWinReposition, true)
 })
 onUnmounted(() => {
   document.removeEventListener('pointerdown', onDocPointerDown)
+  window.removeEventListener('resize', onWinReposition)
+  window.removeEventListener('scroll', onWinReposition, true)
 })
 
 // --- 搜索与筛选 ---
@@ -343,7 +416,7 @@ function onMenuDetail(wp) {
   border-radius: 3px;
 }
 .col-note {
-  max-width: 200px;
+  max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -356,7 +429,6 @@ function onMenuDetail(wp) {
   color: $text-ghost;
   user-select: none;
 }
-.col-contributor { color: $text-faint; }
 .col-actions {
   position: relative;
   display: flex;
@@ -382,12 +454,9 @@ function onMenuDetail(wp) {
   letter-spacing: 0.05em;
   line-height: 1;
 }
+/* 菜单 Teleport 到 body + fixed，避免 table overflow 裁切 */
 .actions-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 40;
-  min-width: 9.5rem;
+  min-width: 10.5rem;
   padding: 0.35rem;
   display: flex;
   flex-direction: column;
@@ -396,6 +465,7 @@ function onMenuDetail(wp) {
   border: 1px solid $border-strong;
   border-radius: 8px;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
 }
 .dropdown-item {
   width: 100%;
