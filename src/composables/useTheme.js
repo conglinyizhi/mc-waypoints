@@ -89,8 +89,8 @@ function cycleTheme() {
 
 const themeLabel = computed(() => {
   if (preference.value === 'system') return '跟随系统'
-  if (preference.value === 'light') return '浅色'
-  return '深色'
+  if (preference.value === 'light') return '浅色模式'
+  return '深色模式'
 })
 
 const themeIcon = computed(() => {
@@ -101,9 +101,9 @@ const themeIcon = computed(() => {
 
 const themeTitle = computed(() => {
   const map = {
-    system: `主题：跟随系统（当前${resolved.value === 'dark' ? '深色' : '浅色'}），点击切换`,
-    light: '主题：浅色，点击切换',
-    dark: '主题：深色，点击切换'
+    system: `主题：跟随系统（当前${resolved.value === 'dark' ? '深色模式' : '浅色模式'}），点击切换`,
+    light: '主题：浅色模式，点击切换',
+    dark: '主题：深色模式，点击切换'
   }
   return map[preference.value] || '切换主题'
 })
