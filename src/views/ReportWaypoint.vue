@@ -229,20 +229,20 @@
             <div class="action-row-right">
               <button
                 type="button"
+                data-name="report-fold-cancel"
+                class="btn-ghost"
+                @click="reportOpen = false"
+              >
+                收起
+              </button>
+              <button
+                type="button"
                 data-name="report-clear-btn"
                 class="btn-danger-ghost"
                 :disabled="!hasReportDraft"
                 @click="showClearDialog = true"
               >
                 清空表单
-              </button>
-              <button
-                type="button"
-                data-name="report-fold-cancel"
-                class="btn-ghost"
-                @click="reportOpen = false"
-              >
-                收起
               </button>
             </div>
           </div>
