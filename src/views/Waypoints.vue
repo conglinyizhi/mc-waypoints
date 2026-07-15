@@ -29,10 +29,10 @@
       <table v-if="filtered.length" data-name="waypoint-table" class="waypoint-table">
         <thead>
           <tr>
-            <th>[维度]名称</th>
-            <th>坐标 (X / Y / Z)</th>
-            <th>备注</th>
-            <th>操作</th>
+            <th class="col-name">[维度]名称</th>
+            <th class="col-coords">坐标 (X / Y / Z)</th>
+            <th class="col-note">备注</th>
+            <th class="col-actions">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -54,6 +54,7 @@
               <span v-else class="note-placeholder" title="无备注">—</span>
             </td>
             <td class="col-actions">
+              <div class="actions-cell">
               <!-- 宽屏：三按钮横排 -->
               <div class="actions-inline" data-name="actions-inline">
                 <button
@@ -91,6 +92,7 @@
                   :aria-expanded="openMenuId === wp.id"
                   @click.stop="toggleActionsMenu(wp.id, $event)"
                 >⋯</button>
+              </div>
               </div>
             </td>
           </tr>
@@ -382,8 +384,9 @@ function onMenuDetail(wp) {
 @include shared.filter-btn-block;
 
 /* ===== 表格 =====
- * 名称/坐标/操作按内容收缩（width:1% + nowrap），备注吃剩余宽度，
- * 避免 table 100% 时列间出现大块空白。
+ * th/td 共用列 class，保证表头与表行列宽一致。
+ * 名称/坐标/操作收缩贴内容；备注吃剩余宽度。
+ * 注意：不要在 td 上直接 display:flex，会打乱 table 列对齐。
  */
 .table-wrap { overflow-x: auto; }
 .waypoint-table {
@@ -392,31 +395,35 @@ function onMenuDetail(wp) {
   font-size: 0.88rem;
   table-layout: auto;
 }
+.waypoint-table th,
+.waypoint-table td {
+  padding: 0.42rem 0.5rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
 .waypoint-table th {
   text-align: left;
-  padding: 0.45rem 0.5rem;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
   border-bottom: 2px solid $border;
   color: $text-dim;
   font-weight: 600;
-  white-space: nowrap;
 }
 .waypoint-table td {
-  padding: 0.42rem 0.5rem;
   border-bottom: 1px solid $bg-elevated;
-  white-space: nowrap;
-  vertical-align: middle;
 }
 .waypoint-table tbody tr:hover { background: $bg-elevated; }
 
-/* 收缩列：贴内容 */
+/* 收缩列：贴内容（th/td 同 class） */
 .col-name,
-.col-coords,
-.col-actions {
+.col-coords {
   width: 1%;
   white-space: nowrap;
 }
 
 .col-name { font-weight: 600; color: $text-bright; }
+th.col-name { font-weight: 600; color: $text-dim; }
+
 .name-with-dim {
   display: inline-flex;
   align-items: center;
@@ -434,7 +441,7 @@ function onMenuDetail(wp) {
   white-space: nowrap;
 }
 
-/* 备注：吃掉剩余横向空间，信息密度更高 */
+/* 备注：吃掉剩余横向空间 */
 .col-note {
   width: auto;
   max-width: none;
@@ -443,6 +450,7 @@ function onMenuDetail(wp) {
   white-space: nowrap;
   color: $text-soft;
 }
+th.col-note { color: $text-dim; }
 .note-text {
   color: $text-soft;
   display: block;
@@ -453,21 +461,27 @@ function onMenuDetail(wp) {
   color: $text-ghost;
   user-select: none;
 }
+
+/* 操作列：td 保持 table-cell；内部再 flex，避免表头/表行列宽错位 */
 .col-actions {
-  position: relative;
-  display: flex;
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  padding-left: 0.35rem;
+}
+.actions-cell {
+  display: inline-flex;
   gap: 0.25rem;
   flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
-  overflow: visible;
-  padding-left: 0.35rem;
+  vertical-align: middle;
 }
 .actions-inline {
-  display: flex;
+  display: inline-flex;
   gap: 0.3rem;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 .actions-compact {
   display: none;
