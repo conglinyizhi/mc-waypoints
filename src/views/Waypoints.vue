@@ -35,7 +35,7 @@
 
             <th>备注</th>
             <th>贡献者</th>
-            <th>复制</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
@@ -56,15 +56,24 @@
               <button
                 data-name="copy-coord-btn"
                 class="copy-btn"
+                title="复制坐标"
                 :class="{ 'copy-btn--ok': copiedId === `${wp.id}-coord` }"
                 @click="doCopy(`${wp.x} ${wp.y} ${wp.z}`, `${wp.id}-coord`)"
               >{{ copiedId === `${wp.id}-coord` ? '✓' : '📋' }}</button>
               <button
                 data-name="copy-tp-btn"
                 class="copy-btn"
+                title="复制 /tp 指令"
                 :class="{ 'copy-btn--ok': copiedId === `${wp.id}-tp` }"
                 @click="doCopy(`/tp ${wp.x} ${wp.y} ${wp.z}`, `${wp.id}-tp`)"
               >{{ copiedId === `${wp.id}-tp` ? '✓' : '/tp' }}</button>
+              <button
+                data-name="report-waypoint-btn"
+                class="copy-btn report-btn"
+                title="发起报错 Issue"
+                :disabled="!repoConfigured"
+                @click="openReportIssue(wp)"
+              >⚠️ 报错</button>
             </td>
           </tr>
         </tbody>
@@ -102,6 +111,10 @@ import { useClipboard } from '../composables/useClipboard.js'
 const waypoints = inject('waypoints')
 const config = inject('config')
 const { copy, copiedId } = useClipboard()
+
+const repoConfigured = computed(() => {
+  return !!(config.value?.github_repo && config.value.github_repo !== 'yourname/yourrepo')
+})
 
 // --- 搜索与筛选 ---
 const searchText = ref('')
@@ -154,6 +167,23 @@ function dimClass(d) {
 
 async function doCopy(text, id) {
   await copy(text, id)
+}
+
+function openReportIssue(wp) {
+  if (!repoConfigured.value) return
+  const repo = config.value.github_repo
+  const title = encodeURIComponent(`[报错] ${wp.name || '未命名'}`)
+  const waypoint_id = encodeURIComponent(wp.id || '')
+  const name = encodeURIComponent(wp.name || '')
+  const coords = encodeURIComponent(`${wp.x} ${wp.y} ${wp.z}`)
+  const dimension = encodeURIComponent(wp.dimension || '')
+  // problem_type / detail 留给用户在 GitHub 表单里选填
+  let url = `https://github.com/${repo}/issues/new?template=report-waypoint.yml&labels=waypoint-report&title=${title}`
+  if (waypoint_id) url += `&waypoint_id=${waypoint_id}`
+  if (name) url += `&name=${name}`
+  if (coords) url += `&coords=${coords}`
+  if (dimension) url += `&dimension=${dimension}`
+  window.open(url, '_blank')
 }
 </script>
 
@@ -229,7 +259,7 @@ async function doCopy(text, id) {
   color: #999;
 }
 .col-contributor { color: #888; }
-.col-actions { display: flex; gap: 0.3rem; }
+.col-actions { display: flex; gap: 0.3rem; flex-wrap: wrap; align-items: center; }
 
 /* ===== 徽章 ===== */
 .dim-badge {
@@ -258,6 +288,9 @@ async function doCopy(text, id) {
 }
 .copy-btn:hover { border-color: #5fdc5f; color: #5fdc5f; }
 .copy-btn--ok { border-color: #5fdc5f; color: #5fdc5f; background: #1a3a1a; }
+.copy-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.report-btn { color: #fbbf24; min-width: auto; white-space: nowrap; }
+.report-btn:hover:not(:disabled) { border-color: #fbbf24; color: #fbbf24; background: #2a2210; }
 
 /* ===== 底部 ===== */
 .footer-bar {

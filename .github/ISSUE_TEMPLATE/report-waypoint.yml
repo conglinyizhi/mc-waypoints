@@ -1,0 +1,85 @@
+name: 坐标报错 / 纠错
+description: 报告错误坐标、过时地点或建议修正
+title: "[报错] "
+labels: ["waypoint-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > 用于反馈坐标簿中某条记录有误（坐标错、维度错、已拆除、名称笔误等）。
+        > 从网页「操作 → 报错」打开时会自动填入该条记录信息。
+
+  - type: input
+    id: waypoint_id
+    attributes:
+      label: 记录 ID
+      description: 坐标点在数据中的 id（网页自动填入，可留空）
+      placeholder: ci-1784112896-8
+    validations:
+      required: false
+
+  - type: input
+    id: name
+    attributes:
+      label: 名称
+      description: 有问题的坐标点名称
+      placeholder: 我家
+    validations:
+      required: true
+
+  - type: input
+    id: coords
+    attributes:
+      label: 当前记录坐标
+      description: 页面上显示的 X Y Z（网页自动填入）
+      placeholder: "-512 64 1024"
+    validations:
+      required: false
+
+  - type: input
+    id: dimension
+    attributes:
+      label: 当前记录维度
+      description: "overworld / nether / end（也可用 主世界、下界/地狱、末地）"
+      placeholder: overworld
+    validations:
+      required: false
+
+  - type: dropdown
+    id: problem_type
+    attributes:
+      label: 问题类型
+      options:
+        - 坐标错误（XYZ 不准）
+        - 维度错误
+        - 名称错误 / 笔误
+        - 地点已拆除 / 不存在
+        - 重复记录
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: detail
+    attributes:
+      label: 问题说明
+      description: 尽量写清错在哪、正确应该是什么
+      placeholder: |
+        例如：实际坐标应为 100 64 -200，当前记录偏了约 30 格。
+        或：该建筑已拆除，建议删除此条。
+    validations:
+      required: true
+
+  - type: input
+    id: suggested_coords
+    attributes:
+      label: 建议修正坐标（选填）
+      description: "若知道正确坐标，填 X Y Z"
+      placeholder: "100 64 -200"
+
+  - type: input
+    id: suggested_dimension
+    attributes:
+      label: 建议修正维度（选填）
+      description: overworld / nether / end
+      placeholder: nether
