@@ -122,8 +122,7 @@ provide('reload', reload)
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1rem;
-  /* 给右上角固定工具条留空，避免标题/导航被挡 */
-  padding-right: max(1rem, 9.5rem);
+  /* 工具条 fixed 浮层，不占文档流；勿加大 padding-right，否则右侧会留空带 */
 }
 
 /* 右上角固定工具条 */
@@ -180,6 +179,14 @@ provide('reload', reload)
   height: 18px;
   border-radius: 3px;
   object-fit: contain;
+  /* GitHub favicon 本体近黑，深色背景上几乎看不见 */
+  filter: none;
+}
+
+/* 深色主题：反色成浅标；浅色保持原样 */
+html[data-theme='dark'] .github-favicon {
+  filter: brightness(0) invert(1);
+  opacity: 0.92;
 }
 
 .github-icon {
@@ -207,6 +214,8 @@ provide('reload', reload)
   gap: 0.55rem;
   margin-bottom: 0.6rem;
   min-height: 1.8rem;
+  /* 仅标题行避开右上角固定条，不挤压整页内容 */
+  padding-right: 10.5rem;
 }
 
 .app-title {
@@ -266,13 +275,8 @@ provide('reload', reload)
 }
 
 @media (max-width: 520px) {
-  .app-shell {
-    padding-right: 1rem;
-    /* 标题行给固定条留高，避免重叠 */
-  }
-
   .app-title-row {
-    padding-right: 0;
+    padding-right: 5.5rem;
     min-height: 2.4rem;
   }
 
