@@ -219,14 +219,6 @@
           <div class="action-row">
             <button
               type="button"
-              data-name="report-fold-cancel"
-              class="btn-ghost"
-              @click="reportOpen = false"
-            >
-              收起
-            </button>
-            <button
-              type="button"
               data-name="report-submit"
               class="btn-primary"
               :disabled="!canSubmit"
@@ -234,10 +226,59 @@
             >
               通过 GitHub Issue 提交报错
             </button>
+            <div class="action-row-right">
+              <button
+                type="button"
+                data-name="report-clear-btn"
+                class="btn-danger-ghost"
+                :disabled="!hasReportDraft"
+                @click="showClearDialog = true"
+              >
+                清空表单
+              </button>
+              <button
+                type="button"
+                data-name="report-fold-cancel"
+                class="btn-ghost"
+                @click="reportOpen = false"
+              >
+                收起
+              </button>
+            </div>
           </div>
           <p v-if="!repoConfigured" class="hint-warn">未配置 github_repo，无法发起 Issue。</p>
         </div>
       </section>
+
+      <!-- 清空报错表单 · 拟态确认 -->
+      <div
+        v-if="showClearDialog"
+        class="modal-overlay"
+        data-name="report-clear-dialog"
+        @click.self="showClearDialog = false"
+        @keydown.esc="showClearDialog = false"
+      >
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="report-clear-title">
+          <h3 id="report-clear-title" class="modal-title">确认清空报错表单？</h3>
+          <p class="modal-body">
+            将清空已勾选的修正项、新填写内容与问题说明，并重置为「修正字段」。此操作不可撤销。
+          </p>
+          <div class="modal-actions">
+            <button
+              type="button"
+              data-name="report-clear-cancel"
+              class="btn-ghost"
+              @click="showClearDialog = false"
+            >取消</button>
+            <button
+              type="button"
+              data-name="report-clear-confirm"
+              class="btn-danger"
+              @click="confirmClearReport"
+            >确认清空</button>
+          </div>
+        </div>
+      </div>
     </template>
   </div>
 </template>
@@ -263,6 +304,7 @@ const target = computed(() => {
 
 /** 报错表单默认折叠 */
 const reportOpen = ref(false)
+const showClearDialog = ref(false)
 
 const action = ref('update')
 const detail = ref('')
@@ -279,20 +321,43 @@ const draft = reactive({
   note: ''
 })
 
-watch(target, (wp) => {
-  if (!wp) return
-  draft.name = wp.name || ''
-  draft.coordsRaw = `${wp.x} ${wp.y} ${wp.z}`
-  draft.dimension = wp.dimension || 'overworld'
-  draft.note = wp.note || ''
+function resetReportForm(wp) {
+  const t = wp || target.value
+  draft.name = t?.name || ''
+  draft.coordsRaw = t ? `${t.x} ${t.y} ${t.z}` : ''
+  draft.dimension = t?.dimension || 'overworld'
+  draft.note = t?.note || ''
   flags.name = false
   flags.coords = false
   flags.dimension = false
   flags.note = false
   action.value = 'update'
   detail.value = ''
+}
+
+watch(target, (wp) => {
+  if (!wp) return
+  resetReportForm(wp)
   reportOpen.value = false
+  showClearDialog.value = false
 }, { immediate: true })
+
+watch(showClearDialog, (open) => {
+  document.body.style.overflow = open ? 'hidden' : ''
+})
+
+/** 表单是否有可清空内容（勾选 / 说明 / 非默认操作） */
+const hasReportDraft = computed(() => {
+  if (action.value === 'delete') return true
+  if (detail.value.trim()) return true
+  if (flags.name || flags.coords || flags.dimension || flags.note) return true
+  return false
+})
+
+function confirmClearReport() {
+  resetReportForm(target.value)
+  showClearDialog.value = false
+}
 
 const repoConfigured = computed(() => {
   const r = config.value?.github_repo
@@ -683,15 +748,91 @@ function openIssue() {
   gap: 0.6rem;
   margin-top: 0.5rem;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.action-row-right {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-left: auto;
 }
 
 .btn-primary {
   @include btn-primary;
-  flex: 1 1 auto;
+  flex: 1 1 12rem;
+  min-width: 10rem;
 }
 
 .btn-ghost {
   @include btn-ghost;
+}
+
+.btn-danger-ghost {
+  @include btn-ghost;
+  color: $danger;
+  border-color: $danger-border;
+
+  &:hover:not(:disabled) {
+    border-color: $danger;
+    color: $danger;
+    background: $danger-bg;
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+.btn-danger {
+  @include btn-danger;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.88rem;
+}
+
+/* 拟态对话框 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+
+.modal-card {
+  background: $bg-panel-alt;
+  border: 1px solid $border-strong;
+  border-radius: $radius-xl;
+  padding: 1.25rem 1.35rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.modal-title {
+  color: $text-bright;
+  font-size: 1.05rem;
+  margin-bottom: 0.7rem;
+}
+
+.modal-body {
+  color: $text-dim;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin-bottom: 1.1rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .hint-warn {
