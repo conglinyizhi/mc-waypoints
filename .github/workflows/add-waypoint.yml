@@ -152,7 +152,9 @@ jobs:
           | 提交者 | @${{ github.event.issue.user.login }} |"
 
           gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}"
-          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:processed"
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" \
+            --add-label "ci:processed" \
+            --remove-label "ci:pending"
 
       - name: 深度查重
         if: >
@@ -307,7 +309,9 @@ jobs:
           审核人: @${{ github.event.comment.user.login }}
 
           请根据反馈修正后重新提交 Issue。"
-          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:rejected"
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" \
+            --add-label "ci:rejected" \
+            --remove-label "ci:pending"
 
       - uses: actions/checkout@v4
         if: steps.gate.outputs.proceed == 'true' && steps.review.outputs.result == 'approved'
@@ -387,7 +391,9 @@ jobs:
           审核人: @${{ github.event.comment.user.login }}"
 
           gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}"
-          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:approved,ci:processed"
+          gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" \
+            --add-label "ci:approved,ci:processed" \
+            --remove-label "ci:pending"
 
       - name: 上报 CI 异常
         if: failure() && steps.gate.outputs.proceed == 'true'
