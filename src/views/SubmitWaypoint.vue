@@ -523,9 +523,7 @@ function openIssue() {
   const name = encodeURIComponent(form.name.trim())
   const { x, y, z } = parsedCoords.value
   const coords = encodeURIComponent(`${x} ${y} ${z}`)
-  // GitHub Issue Form 的 dropdown 预填要求 query 值与 option 文本完全一致。
-  // 中文选项（如「主世界 (overworld)」）在部分环境下匹配失败，
-  // 因此模板选项改为纯键 overworld/nether/end，URL 也传纯键。
+  // 维度模板字段已改为 input（非 dropdown），URL query 可稳定预填纯键。
   const dimension = encodeURIComponent(form.dimension)
   const note = form.note.trim() ? encodeURIComponent(form.note.trim()) : ''
   const labels = 'ci:add_waypoint'

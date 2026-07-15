@@ -124,9 +124,11 @@ jobs:
           git checkout data
           cp /tmp/waypoints.jsonl public/data/waypoints.jsonl
           git add public/data/waypoints.jsonl
+          # 使用 Closes 关键字关联 issue；数据写在 data 非默认分支，
+          # GitHub 不会因此自动关单，下方仍需 gh issue close。
           git commit -m "添加坐标: ${{ steps.parse.outputs.name }} (${{ steps.parse.outputs.x }}, ${{ steps.parse.outputs.y }}, ${{ steps.parse.outputs.z }}) [${{ steps.parse.outputs.dimension }}]
 
-          Refs: #${{ github.event.issue.number }}"
+          Closes #${{ github.event.issue.number }}"
           git push origin data
           git checkout main
 
@@ -345,9 +347,11 @@ jobs:
           git checkout data
           cp /tmp/waypoints.jsonl public/data/waypoints.jsonl
           git add public/data/waypoints.jsonl
+          # 使用 Closes 关键字关联 issue；数据写在 data 非默认分支，
+          # GitHub 不会因此自动关单，下方仍需 gh issue close。
           git commit -m "添加坐标: ${{ steps.write.outputs.name }} (${{ steps.write.outputs.x }}, ${{ steps.write.outputs.y }}, ${{ steps.write.outputs.z }}) [${{ steps.write.outputs.dimension }}]
 
-          Refs: #${{ github.event.issue.number }}"
+          Closes #${{ github.event.issue.number }}"
           git push origin data
           git checkout main
 

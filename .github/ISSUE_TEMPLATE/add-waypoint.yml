@@ -26,17 +26,14 @@ body:
     validations:
       required: true
 
-  - type: dropdown
+  # 使用 input 而非 dropdown：GitHub Issue Form 的 URL query 预填对 dropdown
+  # 支持不可靠（即使 id/option 完全匹配也常被忽略），input 可稳定预填。
+  - type: input
     id: dimension
     attributes:
       label: 维度
-      description: "选择维度（URL 预填使用 overworld / nether / end）"
-      options:
-        # 选项文本必须是纯键：GitHub Issue Form 的 ?dimension= 预填需与 option 完全一致，
-        # 中文选项（如「主世界 (overworld)」）在实践中经常匹配失败。
-        - overworld
-        - nether
-        - end
+      description: "填写 overworld / nether / end（也可用 主世界、下界、末地）"
+      placeholder: overworld
     validations:
       required: true
 

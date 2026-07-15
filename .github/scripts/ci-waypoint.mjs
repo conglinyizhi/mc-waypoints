@@ -91,7 +91,9 @@ function doParse() {
   const name = parseField(body, '名称')
   const coordsRaw = parseField(body, '坐标')
   const dimensionRaw = parseField(body, '维度')
-  const note = parseField(body, '备注')
+  let note = parseField(body, '备注')
+  // GitHub Issue Form 未填字段会渲染为 _No response_
+  if (/^_?No response_?$/i.test(note.trim())) note = ''
 
   // 维度兼容纯键与历史中文选项
   const dimension = normalizeDimension(dimensionRaw)
