@@ -1,9 +1,7 @@
 <template>
   <div class="m-page" data-name="waypoints-mobile-page">
     <div class="m-head">
-      <button type="button" data-name="m-back-desktop" class="m-back" @click="switchToDesktop">← 桌面表格</button>
       <h1 class="m-title">坐标列表 · 卡片</h1>
-      <p class="m-sub">适合窄屏：一卡一条，无需左右滑动</p>
     </div>
 
     <div class="m-toolbar" data-name="m-toolbar">
@@ -97,12 +95,9 @@
 import { computed, inject, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useClipboard } from '../composables/useClipboard.js'
-import { useHomeView } from '../composables/useHomeView.js'
-
 const waypoints = inject('waypoints')
 const router = useRouter()
 const { copy, copiedId } = useClipboard()
-const { setHomeView } = useHomeView()
 
 const searchText = ref('')
 const ALL_DIMS = ['overworld', 'nether', 'end']
@@ -168,11 +163,6 @@ async function doCopy(text, id) {
   await copy(text, id)
 }
 
-function switchToDesktop() {
-  setHomeView('desktop')
-  router.push({ name: 'waypoints' })
-}
-
 function openDetail(wp) {
   if (!wp?.id) return
   router.push({ name: 'report', query: { id: wp.id } })
@@ -192,33 +182,11 @@ function openDetail(wp) {
   margin-bottom: 0.85rem;
 }
 
-.m-back {
-  display: inline-block;
-  border: none;
-  background: transparent;
-  padding: 0;
-  font: inherit;
-  font-size: 0.82rem;
-  color: $text-faint;
-  margin-bottom: 0.35rem;
-  cursor: pointer;
-  text-align: left;
-
-  &:hover { color: $accent; }
-}
-
 
 .m-title {
   margin: 0;
   font-size: 1.15rem;
   color: $text-bright;
-}
-
-.m-sub {
-  margin: 0.25rem 0 0;
-  font-size: 0.78rem;
-  color: $text-ghost;
-  line-height: 1.4;
 }
 
 .m-toolbar {

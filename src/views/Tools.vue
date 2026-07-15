@@ -6,18 +6,6 @@
     </p>
     -->
 
-    <!-- 模块导航（页内锚点，非二级路由 tab） -->
-    <nav class="module-nav" data-name="tools-module-nav" aria-label="小工具模块">
-      <a
-        v-for="m in modules"
-        :key="m.id"
-        :href="`#${m.id}`"
-        :data-name="`tools-nav-${m.id}`"
-        class="module-nav-link"
-        @click.prevent="scrollTo(m.id)"
-      >{{ m.icon }} {{ m.title }}</a>
-    </nav>
-
     <!-- 公告 -->
     <section
       id="tool-announcement"
@@ -77,12 +65,6 @@ import Converter from './Converter.vue'
 
 const route = useRoute()
 
-const modules = [
-  { id: 'tool-announcement', icon: '📢', title: '公告' },
-  { id: 'tool-converter', icon: '🔢', title: '下界换算' }
-  // { id: 'tool-more', icon: '🧩', title: '后续模块' }
-]
-
 function scrollTo(id) {
   const el = document.getElementById(id)
   if (!el) return
@@ -121,41 +103,6 @@ onMounted(() => {
   line-height: 1.5;
 }
 */
-
-.module-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  position: sticky;
-  top: 0.4rem;
-  z-index: 20;
-  padding: 0.4rem 0;
-  background: linear-gradient(
-    to bottom,
-    var(--bg-page) 70%,
-    transparent
-  );
-}
-
-.module-nav-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  padding: 0.35rem 0.7rem;
-  border: 1px solid $border-strong;
-  border-radius: 999px;
-  background: $bg-panel;
-  color: $text-dim;
-  font-size: 0.8rem;
-  text-decoration: none;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-
-  &:hover {
-    border-color: $accent;
-    color: $accent;
-    background: $accent-bg;
-  }
-}
 
 .tool-module {
   border: 1px solid $border;

@@ -102,7 +102,7 @@ const tabs = computed(() => [
   { to: homePath.value, label: '🏠 首页', match: ['waypoints', 'waypoints-mobile', 'report'] },
   { to: '/contribute', label: '✍️ 参与', match: ['contribute'] },
   { to: '/tools', label: '🧰 小工具', match: ['tools'] },
-  { to: '/about', label: 'ℹ️ 关于', match: ['about'] }
+  { to: '/about', label: 'ℹ️ 关于', match: ['about', 'dev'] }
 ])
 
 function isTabActive(tab) {

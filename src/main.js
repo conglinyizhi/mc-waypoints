@@ -10,6 +10,7 @@ const WaypointsMobile = () => import('./views/WaypointsMobile.vue')
 const Contribute = () => import('./views/Contribute.vue')
 const Tools = () => import('./views/Tools.vue')
 const About = () => import('./views/About.vue')
+const DevTools = () => import('./views/DevTools.vue')
 
 const routes = [
   { path: '/', name: 'waypoints', component: Waypoints },
@@ -17,6 +18,7 @@ const routes = [
   { path: '/contribute', name: 'contribute', component: Contribute },
   { path: '/tools', name: 'tools', component: Tools },
   { path: '/about', name: 'about', component: About },
+  { path: '/dev', name: 'dev', component: DevTools },
   // 旧路径兼容 → 合并页 + tab
   { path: '/submit', redirect: { name: 'contribute', query: { tab: 'submit' } } },
   { path: '/server', redirect: { name: 'contribute', query: { tab: 'todo' } } },
