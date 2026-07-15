@@ -16,15 +16,16 @@
         placeholder="搜索名称、备注…"
       />
       <div class="m-filters" role="group" aria-label="维度筛选">
-        <button
-          v-for="d in dimFilters"
-          :key="d.value || 'all'"
-          type="button"
-          :data-name="`m-dim-${d.value || 'all'}`"
+        <label
+          v-for="d in dimOptions"
+          :key="d.value"
+          :data-name="`m-dim-${d.value}`"
           class="m-filter"
-          :class="{ 'm-filter--on': dimFilter === d.value }"
-          @click="dimFilter = d.value"
-        >{{ d.label }}</button>
+          :class="{ 'm-filter--on': selectedDims.includes(d.value) }"
+        >
+          <input v-model="selectedDims" type="checkbox" :value="d.value" />
+          <span>{{ d.label }}</span>
+        </label>
       </div>
     </div>
 
@@ -82,7 +83,7 @@
     </div>
 
     <div v-else data-name="m-empty" class="m-empty">
-      <p v-if="searchText || dimFilter">🔍 没有匹配的坐标点</p>
+      <p v-if="searchText || !dimAllSelected">🔍 没有匹配的坐标点</p>
       <p v-else>📭 还没有坐标点</p>
     </div>
 
@@ -102,14 +103,18 @@ const router = useRouter()
 const { copy, copiedId } = useClipboard()
 
 const searchText = ref('')
-const dimFilter = ref('')
-
-const dimFilters = [
-  { label: '全部', value: '' },
+const ALL_DIMS = ['overworld', 'nether', 'end']
+const dimOptions = [
   { label: '🟢 主世界', value: 'overworld' },
   { label: '🔴 下界', value: 'nether' },
   { label: '🟣 末地', value: 'end' }
 ]
+/** 默认全选；checkbox 复选 */
+const selectedDims = ref([...ALL_DIMS])
+
+const dimAllSelected = computed(() =>
+  ALL_DIMS.every(d => selectedDims.value.includes(d)) && selectedDims.value.length > 0
+)
 
 const filtered = computed(() => {
   let list = waypoints.value || []
@@ -121,8 +126,9 @@ const filtered = computed(() => {
       (wp.note || '').toLowerCase().includes(q)
     )
   }
-  if (dimFilter.value) {
-    list = list.filter(wp => wp.dimension === dimFilter.value)
+  if (!dimAllSelected.value) {
+    const set = new Set(selectedDims.value)
+    list = list.filter(wp => set.has(wp.dimension))
   }
   return list
 })
@@ -221,6 +227,9 @@ function openDetail(wp) {
 }
 
 .m-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   padding: 0.35rem 0.65rem;
   border: 1px solid $border-strong;
   border-radius: 999px;
@@ -228,6 +237,13 @@ function openDetail(wp) {
   color: $text-dim;
   font-size: 0.8rem;
   cursor: pointer;
+  user-select: none;
+
+  input {
+    width: 0.9rem;
+    height: 0.9rem;
+    accent-color: $accent;
+  }
 
   &--on {
     border-color: $accent;

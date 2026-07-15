@@ -10,16 +10,47 @@
         placeholder="搜索名称、备注…"
       />
 
-      <!-- 维度筛选 -->
-      <div class="filter-group">
+      <!-- 维度筛选：收折为「维度」弹出层，checkbox 复选，默认全选 -->
+      <div class="dim-filter" data-name="dimension-filter" ref="dimFilterRoot">
         <button
-          v-for="d in dimFilters"
-          :key="d.value"
-          :data-name="`dimension-filter-${d.value}`"
-          class="filter-btn"
-          :class="{ 'filter-btn--active': dimFilter === d.value }"
-          @click="dimFilter = d.value"
-        >{{ d.label }}</button>
+          type="button"
+          data-name="dimension-filter-toggle"
+          class="dim-filter__toggle"
+          :class="{ 'dim-filter__toggle--open': dimMenuOpen, 'dim-filter__toggle--partial': !dimAllSelected }"
+          :aria-expanded="dimMenuOpen"
+          aria-haspopup="listbox"
+          @click.stop="dimMenuOpen = !dimMenuOpen"
+        >
+          <span class="dim-filter__label">维度</span>
+          <span class="dim-filter__summary">{{ dimFilterSummary }}</span>
+          <span class="dim-filter__caret" aria-hidden="true">{{ dimMenuOpen ? '▴' : '▾' }}</span>
+        </button>
+        <div
+          v-if="dimMenuOpen"
+          class="dim-filter__menu"
+          data-name="dimension-filter-menu"
+          role="listbox"
+          aria-multiselectable="true"
+          @click.stop
+        >
+          <label
+            v-for="d in dimOptions"
+            :key="d.value"
+            class="dim-filter__option"
+            :data-name="`dimension-filter-${d.value}`"
+          >
+            <input
+              v-model="selectedDims"
+              type="checkbox"
+              :value="d.value"
+            />
+            <span>{{ d.label }}</span>
+          </label>
+          <div class="dim-filter__footer">
+            <button type="button" data-name="dimension-filter-all" class="dim-filter__link" @click="selectAllDims">全选</button>
+            <button type="button" data-name="dimension-filter-none" class="dim-filter__link" @click="clearDims">清空</button>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -114,7 +145,7 @@
 
       <!-- 空状态 -->
       <div v-else data-name="empty-state" class="state-box">
-        <p v-if="searchText || dimFilter">🔍 没有匹配的坐标点，试试调整筛选条件</p>
+        <p v-if="searchText || !dimAllSelected">🔍 没有匹配的坐标点，试试调整筛选条件</p>
         <p v-else>📭 还没有坐标点</p>
       </div>
     </div>
@@ -273,29 +304,59 @@ function onWinReposition() {
 
 onMounted(() => {
   document.addEventListener('pointerdown', onDocPointerDown)
+  document.addEventListener('pointerdown', onDimFilterDocDown)
   window.addEventListener('resize', onWinReposition)
   window.addEventListener('scroll', onWinReposition, true)
 })
 onUnmounted(() => {
   document.removeEventListener('pointerdown', onDocPointerDown)
+  document.removeEventListener('pointerdown', onDimFilterDocDown)
   window.removeEventListener('resize', onWinReposition)
   window.removeEventListener('scroll', onWinReposition, true)
 })
 
 // --- 搜索与筛选 ---
 const searchText = ref('')
-const dimFilter = ref('')
 
-const dimFilters = [
-  { label: '全部', value: '' },
+const ALL_DIMS = ['overworld', 'nether', 'end']
+const dimOptions = [
   { label: '🟢 主世界', value: 'overworld' },
   { label: '🔴 下界/地狱', value: 'nether' },
   { label: '🟣 末地', value: 'end' }
 ]
+/** 默认全选；checkbox 复选 */
+const selectedDims = ref([...ALL_DIMS])
+const dimMenuOpen = ref(false)
+const dimFilterRoot = ref(null)
 
+const dimAllSelected = computed(() =>
+  ALL_DIMS.every(d => selectedDims.value.includes(d)) && selectedDims.value.length > 0
+)
+
+const dimFilterSummary = computed(() => {
+  if (!selectedDims.value.length) return '无'
+  if (dimAllSelected.value) return '全部'
+  const map = { overworld: '主世界', nether: '下界', end: '末地' }
+  return selectedDims.value.map(d => map[d] || d).join('、')
+})
+
+function selectAllDims() {
+  selectedDims.value = [...ALL_DIMS]
+}
+
+function clearDims() {
+  selectedDims.value = []
+}
+
+function onDimFilterDocDown(e) {
+  if (!dimMenuOpen.value) return
+  const root = dimFilterRoot.value
+  if (root && typeof root.contains === 'function' && root.contains(e.target)) return
+  dimMenuOpen.value = false
+}
 
 const filtered = computed(() => {
-  let list = waypoints.value
+  let list = waypoints.value || []
 
   // 搜索
   if (searchText.value) {
@@ -307,11 +368,11 @@ const filtered = computed(() => {
     )
   }
 
-  // 维度
-  if (dimFilter.value) {
-    list = list.filter(wp => wp.dimension === dimFilter.value)
+  // 维度复选：未勾选任何维度 → 空列表；全选 → 不过滤
+  if (!dimAllSelected.value) {
+    const set = new Set(selectedDims.value)
+    list = list.filter(wp => set.has(wp.dimension))
   }
-
 
   return list
 })
@@ -394,7 +455,127 @@ function onMenuDetail(wp) {
   &:focus { border-color: $accent; }
 }
 
-@include shared.filter-btn-block;
+/* 维度过滤器（收折 + 复选） */
+.dim-filter {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.dim-filter__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 14rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid $border-strong;
+  border-radius: $radius-md;
+  background: $bg-panel;
+  color: $text-soft;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+
+  &:hover {
+    border-color: $accent;
+    color: $text-muted;
+  }
+
+  &--open {
+    border-color: $accent;
+    color: $accent;
+    background: $accent-bg;
+  }
+
+  &--partial:not(.dim-filter__toggle--open) {
+    border-color: $info-border;
+    color: $info-soft;
+  }
+}
+
+.dim-filter__label {
+  font-weight: 700;
+  color: inherit;
+  flex-shrink: 0;
+}
+
+.dim-filter__summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  color: $text-faint;
+  font-weight: 400;
+}
+
+.dim-filter__toggle--open .dim-filter__summary,
+.dim-filter__toggle--partial .dim-filter__summary {
+  color: inherit;
+}
+
+.dim-filter__caret {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+
+.dim-filter__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 50;
+  min-width: 10.5rem;
+  padding: 0.4rem;
+  border: 1px solid $border-strong;
+  border-radius: $radius-md;
+  background: $bg-panel-alt;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.dim-filter__option {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.45rem;
+  border-radius: $radius;
+  color: $text-muted;
+  font-size: 0.84rem;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover { background: $bg-elevated; }
+
+  input {
+    width: 0.95rem;
+    height: 0.95rem;
+    accent-color: $accent;
+    flex-shrink: 0;
+  }
+}
+
+.dim-filter__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid $border;
+}
+
+.dim-filter__link {
+  border: none;
+  background: transparent;
+  color: $info-soft;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.15rem 0.2rem;
+
+  &:hover { color: $accent; text-decoration: underline; }
+}
 
 /* ===== 表格 =====
  * th/td 共用列 class，保证表头与表行列宽一致。
