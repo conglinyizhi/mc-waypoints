@@ -151,6 +151,7 @@ const repo = computed(() => {
   const r = config.value?.github_repo
   return r && r !== 'yourname/yourrepo' ? `https://github.com/${r}` : null
 })
+const repoText = computed(() => config.value?.github_repo || '—')
 </script>
 
 <style scoped lang="scss">
@@ -217,11 +218,13 @@ const repo = computed(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.65rem;
+  align-items: stretch; /* 两卡等高 */
 }
 
+/* 窄屏仍各占约 50%，不改单列，便于左右对比 */
 @media (max-width: 560px) {
   .view-picker {
-    grid-template-columns: 1fr;
+    gap: 0.45rem;
   }
 }
 
@@ -229,6 +232,8 @@ const repo = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  height: 100%;
+  min-width: 0;
   padding: 0.65rem 0.7rem 0.55rem;
   border: 1px solid $border-strong;
   border-radius: $radius-lg;
@@ -283,6 +288,7 @@ const repo = computed(() => {
 }
 
 .view-option__caption {
+  margin-top: auto;
   font-size: 0.72rem;
   color: $text-ghost;
   line-height: 1.35;
@@ -290,6 +296,10 @@ const repo = computed(() => {
 
 /* ===== 骨架通用 ===== */
 .skel {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 7.5rem; /* 两卡预览区同高 */
   border-radius: $radius-md;
   background: $bg-deep;
   border: 1px solid $border;
@@ -304,22 +314,16 @@ const repo = computed(() => {
 .skel-dot {
   display: block;
   border-radius: 3px;
-  background: linear-gradient(
-    90deg,
-    $border 0%,
-    $border-strong 40%,
-    $border 80%
-  );
-  background-size: 200% 100%;
-  animation: skel-shimmer 1.4s ease-in-out infinite;
-}
-
-@keyframes skel-shimmer {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
+  /* 静态示意块，不做加载动画，避免被当成真骨架屏 */
+  background: $border-strong;
+  opacity: 0.85;
 }
 
 /* 表格骨架 */
+.skel-table {
+  justify-content: flex-start;
+}
+
 .skel-table__toolbar {
   display: flex;
   gap: 0.25rem;
@@ -371,6 +375,11 @@ const repo = computed(() => {
 }
 
 /* 卡片骨架 */
+.skel-cards {
+  justify-content: flex-start;
+  gap: 0;
+}
+
 .skel-cards__search {
   margin-bottom: 0.35rem;
 }
