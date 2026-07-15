@@ -57,13 +57,13 @@
       <nav data-name="app-nav" class="app-nav">
         <router-link
           v-for="tab in tabs"
-          :key="tab.to"
+          :key="tab.to + tab.label"
           :to="tab.to"
           data-name="nav-tab"
           class="nav-tab"
           :class="{ 'nav-tab--active': isTabActive(tab) }"
         >
-          {{ tab.label }}
+          <span class="nav-tab__label" :key="tab.label">{{ tab.label }}</span>
         </router-link>
       </nav>
     </header>
@@ -91,15 +91,15 @@ import { useHomeView } from './composables/useHomeView.js'
 import { useTheme } from './composables/useTheme.js'
 
 const route = useRoute()
-const { homePath } = useHomeView()
+const { homePath, homeNavLabel } = useHomeView()
 
 /**
  * 导航精简：
- * - 首页：按 localStorage 指向表格 / 或卡片列表
+ * - 首页：按 localStorage 指向表格 / 或卡片列表；图标随视图变
  * - 参与 / 小工具 / 关于
  */
 const tabs = computed(() => [
-  { to: homePath.value, label: '🏠 首页', match: ['waypoints', 'waypoints-mobile', 'report'] },
+  { to: homePath.value, label: homeNavLabel.value, match: ['waypoints', 'waypoints-mobile', 'report'] },
   { to: '/contribute', label: '✍️ 参与', match: ['contribute'] },
   { to: '/tools', label: '🧰 小工具', match: ['tools'] },
   { to: '/about', label: 'ℹ️ 关于', match: ['about', 'dev'] }
@@ -270,6 +270,17 @@ html[data-theme='dark'] .github-favicon {
   font-size: 0.9rem;
   color: $text-faint;
   transition: background 0.15s, color 0.15s;
+}
+
+.nav-tab__label {
+  display: inline-block;
+  animation: nav-label-pop 0.28s ease;
+}
+
+@keyframes nav-label-pop {
+  0% { transform: scale(0.92); opacity: 0.5; }
+  60% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .nav-tab:hover {

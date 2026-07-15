@@ -2,7 +2,10 @@
   <div data-name="about-page">
     <!-- 首页视图优先展示：双骨架预览切换 -->
     <div class="about-card about-card--priority" data-name="home-view-card">
-      <h2>📱 首页视图</h2>
+      <h2 class="home-view-heading">
+        <span class="home-view-heading__icon" :key="homeViewIcon" aria-hidden="true">{{ homeViewIcon }}</span>
+        首页视图
+      </h2>
       <p class="hint">
         点选下方预览切换「首页」默认打开方式；选择会记住在本机。
       </p>
@@ -128,7 +131,7 @@ const gitHash = __GIT_HASH__
 
 const config = inject('config')
 const router = useRouter()
-const { isMobileHome, setHomeView, homeRouteName } = useHomeView()
+const { isMobileHome, homeViewIcon, setHomeView, homeRouteName } = useHomeView()
 
 function pickHomeView(mode) {
   if (mode !== 'desktop' && mode !== 'mobile') return
@@ -175,6 +178,25 @@ const repoText = computed(() => config.value?.github_repo || '—')
   font-size: 1rem;
   margin-bottom: 0.55rem;
   color: $text-bright;
+}
+
+.home-view-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.home-view-heading__icon {
+  display: inline-block;
+  min-width: 1.25em;
+  text-align: center;
+  animation: home-icon-pop 0.28s ease;
+}
+
+@keyframes home-icon-pop {
+  0% { transform: scale(0.7); opacity: 0.35; }
+  55% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .info-list {
