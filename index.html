@@ -4,6 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Minecraft 坐标簿</title>
+    <!-- 尽早应用主题，减少首屏闪烁 -->
+    <script>
+      (function () {
+        try {
+          var key = 'mc-waypoints-theme'
+          var pref = localStorage.getItem(key) || 'system'
+          var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+          var theme = pref === 'light' || pref === 'dark' ? pref : (dark ? 'dark' : 'light')
+          document.documentElement.setAttribute('data-theme', theme)
+          document.documentElement.style.colorScheme = theme
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>
