@@ -28,8 +28,8 @@
       data-name="tool-module-converter"
     >
       <header class="tool-module__head">
-        <h2 class="tool-module__title">🔢 下界换算</h2>
-        <p class="tool-module__desc">主世界 ⇄ 下界 8:1，避免传送门串线</p>
+        <h2 class="tool-module__title">🔢 主世界 ⇄ 下界/地狱</h2>
+        <p class="tool-module__desc">8:1 门坐标换算（下界 = 地狱 = Nether）</p>
       </header>
       <div class="tool-module__body">
         <Converter />

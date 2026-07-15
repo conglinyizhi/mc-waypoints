@@ -86,7 +86,7 @@
             :title="converterBtnTitle"
             @click="sendToConverter"
           >
-            🔢 写入换算器
+            {{ converterBtnLabel }}
           </button>
         </div>
       </section>
@@ -445,12 +445,27 @@ async function doCopy(text, id) {
   await copy(text, id)
 }
 
+/** 按钮短文案：说清楚会去算「另一边」维度坐标 */
+const converterBtnLabel = computed(() => {
+  const d = target.value?.dimension
+  if (d === 'nether') return '🔢 换算主世界坐标'
+  if (d === 'overworld') return '🔢 换算下界/地狱坐标'
+  if (d === 'end') return '🔢 用此坐标做下界换算'
+  return '🔢 主世界 ⇄ 下界换算'
+})
+
 const converterBtnTitle = computed(() => {
   const d = target.value?.dimension
-  if (d === 'nether') return '将下界坐标写入换算器（可切换为主世界）'
-  if (d === 'overworld') return '将主世界坐标写入换算器（可切换为下界）'
-  if (d === 'end') return '将坐标写入换算器（末地无 8:1，默认按主世界方向）'
-  return '写入下界/主世界坐标换算器'
+  if (d === 'nether') {
+    return '带着当前下界/地狱坐标打开换算器，自动算出对应主世界门坐标（可再点方向条切换）'
+  }
+  if (d === 'overworld') {
+    return '带着当前主世界坐标打开换算器，自动算出对应下界/地狱门坐标（可再点方向条切换）'
+  }
+  if (d === 'end') {
+    return '末地没有 8:1 门换算；仍可将 XYZ 带入换算器，默认按主世界→下界/地狱方向计算'
+  }
+  return '打开主世界 ⇄ 下界/地狱（Nether）坐标换算器'
 })
 
 /** 带着当前点 X/Y/Z 与维度跳到小工具·换算器 */

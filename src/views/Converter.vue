@@ -1,8 +1,15 @@
 <template>
   <div class="converter-page" data-name="converter-page">
     <p class="desc">
-      主世界与下界坐标比为 <strong>8:1</strong>（Y 高度不变）。用于对齐传送门，减少串线。
-      点击上方方向条可切换计算方向，<strong>输入坐标会保留</strong>。
+      主世界与
+      <strong>下界 / 地狱</strong>
+      （Nether，同一维度的不同叫法）坐标比为
+      <strong>8:1</strong>（Y 高度不变）。
+      用于对齐传送门，减少串线。
+      点击方向条可切换计算方向，<strong>输入坐标会保留</strong>。
+    </p>
+    <p class="alias-tip" data-name="converter-alias-tip">
+      💡 文中的「下界」「地狱」「Nether」指同一个维度，不是三个地方。
     </p>
 
     <div class="conv-panel" data-name="converter-panel">
@@ -126,12 +133,12 @@ const inZ = ref(null)
 const fromMeta = computed(() =>
   dir.value === 'ow2nether'
     ? { emoji: '🟢', label: '主世界' }
-    : { emoji: '🔴', label: '下界' }
+    : { emoji: '🔴', label: '下界/地狱' }
 )
 
 const toMeta = computed(() =>
   dir.value === 'ow2nether'
-    ? { emoji: '🔴', label: '下界' }
+    ? { emoji: '🔴', label: '下界/地狱' }
     : { emoji: '🟢', label: '主世界' }
 )
 
@@ -250,10 +257,21 @@ watch(
 .desc {
   color: $text-soft;
   font-size: 0.85rem;
-  margin-bottom: 0.9rem;
+  margin-bottom: 0.45rem;
   line-height: 1.6;
 
   strong { color: $gold; }
+}
+
+.alias-tip {
+  margin: 0 0 0.9rem;
+  padding: 0.4rem 0.55rem;
+  border-left: 3px solid $warn-border;
+  background: $warn-bg;
+  color: $text-muted;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  border-radius: 0 $radius $radius 0;
 }
 
 .conv-panel {
