@@ -1,8 +1,10 @@
 <template>
   <div class="tools-page" data-name="tools-page">
+    <!--
     <p class="tools-intro">
       常用小工具集中在一页，向下滚动即可；后续可在此继续加模块。
     </p>
+    -->
 
     <!-- 模块导航（页内锚点，非二级路由 tab） -->
     <nav class="module-nav" data-name="tools-module-nav" aria-label="小工具模块">
@@ -46,7 +48,10 @@
       </div>
     </section>
 
-    <!-- 后续模块占位 -->
+    <!--
+      开发侧预留：后续模块占位（不对用户展示）
+      恢复时取消注释，并在 modules 数组加回 tool-more 项。
+
     <section
       id="tool-more"
       class="tool-module tool-module--placeholder"
@@ -60,6 +65,7 @@
         <p>暂无更多工具。有想法可以提 Issue / 直接改本页加一节。</p>
       </div>
     </section>
+    -->
   </div>
 </template>
 
@@ -73,8 +79,8 @@ const route = useRoute()
 
 const modules = [
   { id: 'tool-announcement', icon: '📢', title: '公告' },
-  { id: 'tool-converter', icon: '🔢', title: '下界换算' },
-  { id: 'tool-more', icon: '🧩', title: '后续模块' }
+  { id: 'tool-converter', icon: '🔢', title: '下界换算' }
+  // { id: 'tool-more', icon: '🧩', title: '后续模块' }
 ]
 
 function scrollTo(id) {
@@ -83,13 +89,13 @@ function scrollTo(id) {
   el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-/** 兼容旧链接 ?tab=converter / #tool-converter */
+/** 兼容旧链接 ?tab=converter */
 function scrollFromRoute() {
   const tab = String(route.query.tab || route.query.module || '').toLowerCase()
   let id = ''
   if (tab === 'converter' || tab === 'nether' || tab === 'convert') id = 'tool-converter'
   else if (tab === 'announcement' || tab === 'ann') id = 'tool-announcement'
-  else if (tab === 'more' || tab === 'future') id = 'tool-more'
+  // else if (tab === 'more' || tab === 'future') id = 'tool-more'
   if (id) nextTick(() => scrollTo(id))
 }
 
@@ -107,12 +113,14 @@ onMounted(() => {
   gap: 0.85rem;
 }
 
+/*
 .tools-intro {
   margin: 0;
   font-size: 0.85rem;
   color: $text-soft;
   line-height: 1.5;
 }
+*/
 
 .module-nav {
   display: flex;
@@ -154,7 +162,6 @@ onMounted(() => {
   border-radius: $radius-lg;
   background: $bg-panel;
   overflow: hidden;
-  /* 锚点滚动时不被顶栏挡住一点 */
   scroll-margin-top: 3.2rem;
 }
 
@@ -182,6 +189,7 @@ onMounted(() => {
   padding: 0.85rem 1rem 1rem;
 }
 
+/*
 .tool-module--placeholder {
   border-style: dashed;
   opacity: 0.92;
@@ -197,4 +205,5 @@ onMounted(() => {
 
   p { margin: 0; }
 }
+*/
 </style>
