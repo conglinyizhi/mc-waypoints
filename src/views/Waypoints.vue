@@ -24,6 +24,19 @@
 
     </div>
 
+    <!-- 窄屏/手机：引导进入卡片列表（不自动跳转，由用户点选） -->
+    <div class="mobile-view-banner" data-name="mobile-view-banner">
+      <div class="mobile-view-banner__text">
+        <strong>屏幕较窄？</strong>
+        <span>表格可能显示不全，可改用专为手机设计的卡片列表。</span>
+      </div>
+      <router-link
+        to="/m"
+        data-name="open-mobile-list-btn"
+        class="mobile-view-banner__btn"
+      >📱 卡片列表</router-link>
+    </div>
+
     <!-- 表格区域 -->
     <div class="table-wrap">
       <table v-if="filtered.length" data-name="waypoint-table" class="waypoint-table">
@@ -539,6 +552,60 @@ th.col-note { color: $text-dim; }
     border-color: $info;
     color: $info;
     background: $info-bg-hover;
+  }
+}
+
+/* ===== 手机版入口 ===== */
+.mobile-view-banner {
+  display: none; /* 默认宽屏隐藏，窄屏再显示 */
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin: 0 0 0.85rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid $info-border;
+  border-radius: $radius-md;
+  background: $info-bg;
+}
+
+.mobile-view-banner__text {
+  font-size: 0.8rem;
+  color: $text-soft;
+  line-height: 1.45;
+  min-width: 0;
+
+  strong {
+    color: $info-soft;
+    margin-right: 0.25rem;
+  }
+}
+
+.mobile-view-banner__btn {
+  flex-shrink: 0;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid $info;
+  border-radius: $radius-md;
+  background: $info-bg-deep;
+  color: $info-soft;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s;
+
+  &:hover { background: $info-bg-hover; }
+}
+
+@media (max-width: 720px) {
+  .mobile-view-banner {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+
+/* 宽屏也可在工具栏旁用小号入口（可选可见）— 统一在 ≤900 显示提示 */
+@media (max-width: 900px) and (min-width: 721px) {
+  .mobile-view-banner {
+    display: flex;
   }
 }
 
