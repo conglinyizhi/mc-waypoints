@@ -55,7 +55,7 @@
 
     </div>
 
-    <!-- 窄屏/手机：引导切换首页视图（写入 localStorage，可由关于页再改） -->
+    <!-- 窄屏/手机：引导切换首页视图（写入 localStorage，可在设置页再改） -->
     <div class="mobile-view-banner" data-name="mobile-view-banner">
       <div class="mobile-view-banner__text">
         <strong>屏幕较窄？</strong>
@@ -81,7 +81,7 @@
         <h3 id="home-view-dialog-title" class="modal-title">切换到手机卡片首页？</h3>
         <p class="modal-body">
           确认后，「首页」将默认打开卡片列表，并记住你的选择。
-          之后可在 <strong>关于</strong> 页随时改回电脑表格视图。
+          之后可在 <strong>设置</strong> 页随时改回电脑表格视图。
         </p>
         <div class="modal-actions">
           <button type="button" data-name="home-view-cancel" class="btn-ghost" @click="showHomeViewDialog = false">取消</button>

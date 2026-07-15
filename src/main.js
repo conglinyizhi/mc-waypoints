@@ -9,7 +9,7 @@ const Waypoints = () => import('./views/Waypoints.vue')
 const WaypointsMobile = () => import('./views/WaypointsMobile.vue')
 const Contribute = () => import('./views/Contribute.vue')
 const Tools = () => import('./views/Tools.vue')
-const About = () => import('./views/About.vue')
+const Settings = () => import('./views/About.vue')
 const DevTools = () => import('./views/DevTools.vue')
 
 const routes = [
@@ -17,7 +17,8 @@ const routes = [
   { path: '/m', name: 'waypoints-mobile', component: WaypointsMobile },
   { path: '/contribute', name: 'contribute', component: Contribute },
   { path: '/tools', name: 'tools', component: Tools },
-  { path: '/about', name: 'about', component: About },
+  { path: '/settings', name: 'settings', component: Settings },
+  { path: '/about', redirect: { name: 'settings' } },
   { path: '/dev', name: 'dev', component: DevTools },
   // 旧路径兼容 → 合并页 + tab
   { path: '/submit', redirect: { name: 'contribute', query: { tab: 'submit' } } },
@@ -44,7 +45,7 @@ const { preference } = useHomeView()
  * 首页视图：localStorage 偏好 + 守卫
  * - 偏好 mobile：访问 / → /m
  * - 偏好 desktop：访问 /m → /
- * 关于页可随时改偏好；详情 /report 不拦截
+ * 设置页可随时改偏好；详情 /report 不拦截
  */
 router.beforeEach((to) => {
   const mode = preference.value

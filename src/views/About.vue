@@ -1,5 +1,5 @@
 <template>
-  <div data-name="about-page">
+  <div data-name="settings-page">
     <!-- 首页视图优先展示：双骨架预览切换 -->
     <div class="about-card about-card--priority" data-name="home-view-card">
       <h2 class="home-view-heading">
@@ -89,7 +89,7 @@
     </div>
 
     <div class="about-card">
-      <h2>ℹ️ 关于</h2>
+      <h2>ℹ️ 关于本站</h2>
 
       <dl class="info-list">
         <dt>项目</dt>

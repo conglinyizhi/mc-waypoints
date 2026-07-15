@@ -48,7 +48,7 @@ const isMobileHome = computed(() => preference.value === 'mobile')
 const homeViewLabel = computed(() =>
   preference.value === 'mobile' ? '手机卡片' : '电脑表格'
 )
-/** 与当前首页形态一致的图标（顶栏 / 关于卡标题同步用） */
+/** 与当前首页形态一致的图标（顶栏 / 设置页标题同步用） */
 const homeViewIcon = computed(() => (preference.value === 'mobile' ? '📱' : '🖥️'))
 const homeNavLabel = computed(() => `${homeViewIcon.value} 首页`)
 const homeViewCardTitle = computed(() => `${homeViewIcon.value} 首页视图`)

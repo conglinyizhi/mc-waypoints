@@ -96,13 +96,13 @@ const { homePath, homeNavLabel } = useHomeView()
 /**
  * 导航精简：
  * - 首页：按 localStorage 指向表格 / 或卡片列表；图标随视图变
- * - 参与 / 小工具 / 关于
+ * - 参与 / 小工具 / 设置
  */
 const tabs = computed(() => [
   { to: homePath.value, label: homeNavLabel.value, match: ['waypoints', 'waypoints-mobile', 'report'] },
   { to: '/contribute', label: '✍️ 参与', match: ['contribute'] },
   { to: '/tools', label: '🧰 小工具', match: ['tools'] },
-  { to: '/about', label: 'ℹ️ 关于', match: ['about', 'dev'] }
+  { to: '/settings', label: '⚙️ 设置', match: ['settings', 'about', 'dev'] }
 ])
 
 function isTabActive(tab) {
