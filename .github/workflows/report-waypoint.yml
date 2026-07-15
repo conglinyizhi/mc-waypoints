@@ -224,15 +224,16 @@ jobs:
     if: >
       vars.CI_DISABLED != 'true' &&
       github.event.action == 'created' &&
+      github.event.issue.state == 'open' &&
       contains(github.event.issue.labels.*.name, 'ci:report_waypoint') &&
       contains(github.event.issue.labels.*.name, 'ci:pending') &&
       !contains(github.event.issue.labels.*.name, 'ci:processed') &&
       !contains(github.event.issue.labels.*.name, 'ci:approved') &&
       !contains(github.event.issue.labels.*.name, 'ci:rejected') &&
       (
-        contains(github.event.comment.author_association, 'OWNER') ||
-        contains(github.event.comment.author_association, 'COLLABORATOR') ||
-        contains(github.event.comment.author_association, 'MEMBER')
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'COLLABORATOR' ||
+        github.event.comment.author_association == 'MEMBER'
       )
     permissions:
       contents: write
