@@ -73,11 +73,11 @@
                   @click="doCopy(`/tp ${wp.x} ${wp.y} ${wp.z}`, `${wp.id}-tp`)"
                 >{{ copiedId === `${wp.id}-tp` ? '✓' : '/tp' }}</button>
                 <button
-                  data-name="report-waypoint-btn"
-                  class="copy-btn report-btn"
-                  title="发起报错 Issue"
-                                    @click="openReportIssue(wp)"
-                >⚠️ 报错</button>
+                  data-name="detail-waypoint-btn"
+                  class="copy-btn detail-btn"
+                  title="查看详情 / 报错"
+                  @click="openDetail(wp)"
+                >ℹ️</button>
               </div>
 
               <!-- 窄屏：… 折叠菜单 -->
@@ -119,10 +119,10 @@
                   <button
                     type="button"
                     role="menuitem"
-                    data-name="report-waypoint-btn"
-                    class="copy-btn report-btn dropdown-item"
-                    @click="onMenuReport(wp)"
-                  >⚠️ 报错</button>
+                    data-name="detail-waypoint-btn"
+                    class="copy-btn detail-btn dropdown-item"
+                    @click="onMenuDetail(wp)"
+                  >ℹ️ 详情</button>
                 </div>
               </div>
             </td>
@@ -266,14 +266,14 @@ async function onMenuCopy(text, id) {
   closeActionsMenu()
 }
 
-function openReportIssue(wp) {
-  // 先进入站内报错页勾选字段，再由该页打开 GitHub Issue
+function openDetail(wp) {
+  // 详情页默认只展示记录；报错表单在页内按需展开
   if (!wp?.id) return
   router.push({ name: 'report', query: { id: wp.id } })
 }
 
-function onMenuReport(wp) {
-  openReportIssue(wp)
+function onMenuDetail(wp) {
+  openDetail(wp)
   closeActionsMenu()
 }
 </script>
@@ -421,15 +421,15 @@ function onMenuReport(wp) {
 /* ===== 操作按钮 ===== */
 @include shared.copy-btn-block;
 
-.report-btn {
-  color: $warn;
+.detail-btn {
+  color: $info;
   min-width: auto;
   white-space: nowrap;
 
   &:hover:not(:disabled) {
-    border-color: $warn;
-    color: $warn;
-    background: $warn-bg-strong;
+    border-color: $info;
+    color: $info;
+    background: $info-bg-hover;
   }
 }
 
