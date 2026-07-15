@@ -236,7 +236,7 @@ html[data-theme='dark'] .github-favicon {
 }
 
 .app-header {
-  padding: 1rem 0;
+  padding: 1rem 0 0;
   border-bottom: 2px solid $border;
 }
 

@@ -79,6 +79,15 @@
           >
             {{ copiedId === 'detail-tp' ? '✓ 已复制' : '/tp 复制指令' }}
           </button>
+          <button
+            type="button"
+            data-name="detail-to-converter"
+            class="chip-btn chip-btn--converter"
+            :title="converterBtnTitle"
+            @click="sendToConverter"
+          >
+            🔢 写入换算器
+          </button>
         </div>
       </section>
 
@@ -285,10 +294,11 @@
 
 <script setup>
 import { computed, inject, reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useClipboard } from '../composables/useClipboard.js'
 
 const route = useRoute()
+const router = useRouter()
 const waypoints = inject('waypoints')
 const config = inject('config')
 const loadingList = inject('loading')
@@ -435,6 +445,31 @@ async function doCopy(text, id) {
   await copy(text, id)
 }
 
+const converterBtnTitle = computed(() => {
+  const d = target.value?.dimension
+  if (d === 'nether') return '将下界坐标写入换算器（可切换为主世界）'
+  if (d === 'overworld') return '将主世界坐标写入换算器（可切换为下界）'
+  if (d === 'end') return '将坐标写入换算器（末地无 8:1，默认按主世界方向）'
+  return '写入下界/主世界坐标换算器'
+})
+
+/** 带着当前点 X/Y/Z 与维度跳到小工具·换算器 */
+function sendToConverter() {
+  const wp = target.value
+  if (!wp) return
+  const from = wp.dimension === 'nether' ? 'nether' : 'overworld'
+  router.push({
+    name: 'tools',
+    query: {
+      tab: 'converter',
+      x: String(wp.x),
+      y: String(wp.y),
+      z: String(wp.z),
+      from
+    }
+  })
+}
+
 function openIssue() {
   if (!canSubmit.value) return
   const wp = target.value
@@ -561,6 +596,17 @@ function openIssue() {
     border-color: $accent;
     color: $accent;
     background: $accent-bg;
+  }
+
+  &--converter {
+    color: $info-soft;
+    border-color: $info-border;
+
+    &:hover:not(:disabled) {
+      border-color: $info;
+      color: $info;
+      background: $info-bg-hover;
+    }
   }
 }
 
