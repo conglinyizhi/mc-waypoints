@@ -2,9 +2,16 @@ name: 处理坐标提交
 
 on:
   issues:
+    # 模板创建时 GitHub 会几乎同时派发 opened + labeled(ci:add_waypoint)
+    # 仅靠 job if 的事件快照拦不住双跑，必须配合 concurrency + 实时标签门闩
     types: [opened, reopened, labeled]
   issue_comment:
     types: [created]
+
+# 同一 issue 串行处理，避免 opened/labeled 双触发并行双写评论
+concurrency:
+  group: waypoint-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
 
 jobs:
   validate:
@@ -16,7 +23,9 @@ jobs:
       ) &&
       !contains(github.event.issue.labels.*.name, 'ci:pending') &&
       !contains(github.event.issue.labels.*.name, 'ci:invalid') &&
-      !contains(github.event.issue.labels.*.name, 'ci:processed')
+      !contains(github.event.issue.labels.*.name, 'ci:processed') &&
+      !contains(github.event.issue.labels.*.name, 'ci:approved') &&
+      !contains(github.event.issue.labels.*.name, 'ci:rejected')
     permissions:
       contents: write
       issues: write
@@ -25,14 +34,35 @@ jobs:
       GH_TOKEN: ${{ github.token }}
 
     steps:
+      # 事件 payload 是快照；并发时两个 run 启动瞬间都还没 ci:pending
+      # 串行排队后，后到者在这里重新读远程标签，已处理则整 job 跳过
+      - name: 幂等门闩
+        id: gate
+        run: |
+          set -euo pipefail
+          LABELS=$(gh issue view "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --json labels \
+            --jq '[.labels[].name] | join(",")')
+          echo "live_labels=$LABELS"
+          if echo ",$LABELS," | grep -qE ',(ci:pending|ci:invalid|ci:processed|ci:approved|ci:rejected),'; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "已由其他 run 处理（标签: $LABELS），跳过"
+          else
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.gate.outputs.proceed == 'true'
 
       - name: 获取数据文件
+        if: steps.gate.outputs.proceed == 'true'
         run: |
           git fetch origin data
           git show origin/data:public/data/waypoints.jsonl > public/data/waypoints.jsonl 2>/dev/null || touch public/data/waypoints.jsonl
 
       - name: 解析并校验
+        if: steps.gate.outputs.proceed == 'true'
         id: parse
         env:
           BODY: ${{ github.event.issue.body }}
@@ -53,7 +83,7 @@ jobs:
           echo "errors=$(echo "$RESULT" | jq -r '.errors | join("\n")')" >> $GITHUB_OUTPUT
 
       - name: 校验失败
-        if: steps.parse.outputs.valid == 'false'
+        if: steps.gate.outputs.proceed == 'true' && steps.parse.outputs.valid == 'false'
         run: |
           gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "❌ **校验失败，请修正后重新提交：**
 
@@ -62,10 +92,14 @@ jobs:
 
       - name: 直接写入
         if: >
+          steps.gate.outputs.proceed == 'true' &&
           steps.parse.outputs.valid == 'true' &&
           steps.parse.outputs.is_maintainer == 'true' &&
           steps.parse.outputs.debug == 'false'
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
           CONTRIBUTOR="${{ github.event.issue.user.login }}"
           ID="ci-$(date +%s)-${{ github.event.issue.number }}"
           CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -98,6 +132,7 @@ jobs:
 
       - name: 直接写入完成
         if: >
+          steps.gate.outputs.proceed == 'true' &&
           steps.parse.outputs.valid == 'true' &&
           steps.parse.outputs.is_maintainer == 'true' &&
           steps.parse.outputs.debug == 'false'
@@ -117,6 +152,7 @@ jobs:
 
       - name: 深度查重
         if: >
+          steps.gate.outputs.proceed == 'true' &&
           steps.parse.outputs.valid == 'true' &&
           ( steps.parse.outputs.is_maintainer == 'false' || steps.parse.outputs.debug == 'true' )
         id: deepcheck
@@ -135,6 +171,7 @@ jobs:
 
       - name: pending 评论
         if: >
+          steps.gate.outputs.proceed == 'true' &&
           steps.parse.outputs.valid == 'true' &&
           ( steps.parse.outputs.is_maintainer == 'false' || steps.parse.outputs.debug == 'true' )
         run: |
@@ -174,7 +211,7 @@ jobs:
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "$LABELS"
 
       - name: 上报 CI 异常
-        if: failure()
+        if: failure() && steps.gate.outputs.proceed == 'true'
         run: |
           gh issue create \
             --repo "${{ github.repository }}" \
@@ -191,8 +228,12 @@ jobs:
 
   review:
     if: >
+      vars.CI_DISABLED != 'true' &&
       github.event.action == 'created' &&
       contains(github.event.issue.labels.*.name, 'ci:pending') &&
+      !contains(github.event.issue.labels.*.name, 'ci:processed') &&
+      !contains(github.event.issue.labels.*.name, 'ci:approved') &&
+      !contains(github.event.issue.labels.*.name, 'ci:rejected') &&
       (
         contains(github.event.comment.author_association, 'OWNER') ||
         contains(github.event.comment.author_association, 'COLLABORATOR') ||
@@ -206,22 +247,43 @@ jobs:
       GH_TOKEN: ${{ github.token }}
 
     steps:
+      - name: 幂等门闩
+        id: gate
+        run: |
+          set -euo pipefail
+          LABELS=$(gh issue view "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --json labels \
+            --jq '[.labels[].name] | join(",")')
+          echo "live_labels=$LABELS"
+          if echo ",$LABELS," | grep -qE ',(ci:processed|ci:approved|ci:rejected),'; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "审核已结束（标签: $LABELS），跳过"
+          elif ! echo ",$LABELS," | grep -q ',ci:pending,'; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "不在 pending 状态，跳过"
+          else
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: 判断审核结果
+        if: steps.gate.outputs.proceed == 'true'
         id: review
         env:
           COMMENT: ${{ github.event.comment.body }}
         run: |
-          LOWER=$(echo "$COMMENT" | tr '[:upper:]' '[:lower:]')
-          if echo "$LOWER" | grep -qE '通过|ok'; then
-            echo "result=approved" >> $GITHUB_OUTPUT
-          elif echo "$LOWER" | grep -qE '不通过|fail|no|拒绝|reject'; then
+          # 先匹配拒绝词：中文「不通过」包含「通过」，顺序反了会误判为通过
+          LOWER=$(echo "$COMMENT" | tr '[:upper:]' '[:lower:]' | tr -d '\r')
+          if echo "$LOWER" | grep -qE '不通过|fail|拒绝|reject|(^|[[:space:]])no($|[[:space:]])'; then
             echo "result=rejected" >> $GITHUB_OUTPUT
+          elif echo "$LOWER" | grep -qE '通过|(^|[[:space:]])ok($|[[:space:]])|approve'; then
+            echo "result=approved" >> $GITHUB_OUTPUT
           else
             echo "result=ignored" >> $GITHUB_OUTPUT
           fi
 
       - name: 审核拒绝
-        if: steps.review.outputs.result == 'rejected'
+        if: steps.gate.outputs.proceed == 'true' && steps.review.outputs.result == 'rejected'
         run: |
           gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "🚫 **审核未通过**
 
@@ -231,16 +293,16 @@ jobs:
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:rejected"
 
       - uses: actions/checkout@v4
-        if: steps.review.outputs.result == 'approved'
+        if: steps.gate.outputs.proceed == 'true' && steps.review.outputs.result == 'approved'
 
       - name: 获取数据文件
-        if: steps.review.outputs.result == 'approved'
+        if: steps.gate.outputs.proceed == 'true' && steps.review.outputs.result == 'approved'
         run: |
           git fetch origin data
           git show origin/data:public/data/waypoints.jsonl > public/data/waypoints.jsonl 2>/dev/null || touch public/data/waypoints.jsonl
 
       - name: 审核通过 — 解析并写入
-        if: steps.review.outputs.result == 'approved'
+        if: steps.gate.outputs.proceed == 'true' && steps.review.outputs.result == 'approved'
         id: write
         env:
           BODY: ${{ github.event.issue.body }}
@@ -274,7 +336,7 @@ jobs:
           node .github/scripts/ci-waypoint.mjs write public/data/waypoints.jsonl "$RECORD"
 
       - name: 提交推送
-        if: steps.review.outputs.result == 'approved'
+        if: steps.gate.outputs.proceed == 'true' && steps.review.outputs.result == 'approved'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -290,7 +352,7 @@ jobs:
           git checkout main
 
       - name: 评论并关闭
-        if: steps.review.outputs.result == 'approved'
+        if: steps.gate.outputs.proceed == 'true' && steps.review.outputs.result == 'approved'
         run: |
           gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" -b "✨ **审核通过，坐标已写入主分支**
 
@@ -307,7 +369,7 @@ jobs:
           gh issue edit "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --add-label "ci:approved,ci:processed"
 
       - name: 上报 CI 异常
-        if: failure()
+        if: failure() && steps.gate.outputs.proceed == 'true'
         run: |
           gh issue create \
             --repo "${{ github.repository }}" \
