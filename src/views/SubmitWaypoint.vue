@@ -177,7 +177,13 @@
               </span>
             </label>
 
-            <label class="parse-row" :class="{ 'parse-row--disabled': !parseResult.dimension }">
+            <label
+              class="parse-row"
+              :class="{
+                'parse-row--disabled': !parseResult.dimension,
+                'parse-row--warn': parseResult.dimension && parseResult.dimensionConfidence === 'weak'
+              }"
+            >
               <input
                 v-model="applyFlags.dimension"
                 type="checkbox"
@@ -186,7 +192,20 @@
               />
               <span class="parse-key">维度</span>
               <span class="parse-val">
-                {{ parseResult.dimension ? dimLabel(parseResult.dimension) : '（未识别，保持现状）' }}
+                <template v-if="parseResult.dimension">
+                  {{ dimLabel(parseResult.dimension) }}
+                  <span
+                    v-if="parseResult.dimensionConfidence === 'weak'"
+                    class="parse-badge parse-badge--warn"
+                  >弱匹配</span>
+                </template>
+                <template v-else>（未识别，保持现状）</template>
+              </span>
+              <span
+                v-if="parseResult.dimension && parseResult.dimensionConfidence === 'weak'"
+                class="parse-hint parse-hint--warn"
+              >
+                维度词嵌在中文名称中，可能只是地名的一部分；默认不覆盖，确认后再勾选。
               </span>
               <span v-if="parseResult.dimension && form.dimension !== parseResult.dimension" class="parse-cur">
                 当前：{{ dimLabel(form.dimension) }}
@@ -381,22 +400,23 @@ function coordsText(c) {
 function smartParseText(text) {
   const raw = String(text || '').trim()
   if (!raw) {
-    return { name: '', coords: null, dimension: null, note: '' }
+    return { name: '', coords: null, dimension: null, dimensionConfidence: null, note: '' }
   }
 
   let work = raw.replace(/\u00a0/g, ' ')
   let dimension = null
+  // strong：可默认勾选；weak：展示但不默认勾选（嵌在中文名里的关键词）
+  let dimensionConfidence = null
   let name = ''
   let note = ''
   let coords = null
 
   // 维度词摘取策略（避免「末地船」「末地传送门」被误判）：
-  // 1) 独立词：两侧为边界（空白/标点/串端）→ 记维度并从文本中移除
-  // 2) 紧贴坐标：如「地狱X90」「下界X90 Y…」→ 记维度并移除维度词
-  // 3) 名称前缀：串首「下界要塞」「主世界基地」等（维度词+常见后缀）→ 记维度但保留全名
-  // 4) 不匹配无边界粘连（「末地船」只当名称）
-  // 5) 门类专名：末地传送门/下界传送门 不据此推断维度
-  //    （末地门建在主世界；下界门主世界与下界皆有）
+  // 1) 独立词 / 定位短语：两侧边界，或「在/位于…末地」→ strong，并从文本中移除
+  // 2) 紧贴坐标：如「地狱X90」→ strong，并移除维度词
+  // 3) 名称前缀：串首「下界要塞」等 → strong，保留全名
+  // 4) 嵌在其它中文中：如「末地船」→ weak 或忽略（门类忽略）
+  // 5) 门类专名：末地传送门/下界传送门 不推断维度
   const dimTokenRe = [
     { re: /(主\s*世界|overworld)/i, dim: 'overworld' },
     { re: /(下\s*界|地\s*狱|nether)/i, dim: 'nether' },
@@ -406,9 +426,13 @@ function smartParseText(text) {
   const placeSuffix = /^(要塞|基地|家|城|村|塔|矿|洞|港|站|点|农场|交易所|刷怪|刷铁|仓库|中枢|枢纽)/
   // 维度词后接门类专名时跳过（整词当名称的一部分）
   const portalLike = /^(传送门|门户|门)/
+  // 「在末地」「位于地狱」「on nether」等定位表达 → 仍算强信号
+  const locPrepBefore = /(?:^|[\s,，、:：;；|｜\-_/（）()【】\[\]])(?:在|位于|處|处|to|at|in|on)\s*$/i
   // 维度后紧跟坐标轴：地狱X90 / netherX:1 / 下界 x 2
   const isCoordLead = (s) => /^[xXyYzZ]\s*[:=：]?\s*-?\d/.test(s)
   const isBoundary = (ch) => !ch || /[\s,，、:：;；|｜\-_/（）()【】\[\]]/.test(ch)
+  const isCjk = (ch) => !!ch && /[\u3400-\u9fff]/.test(ch)
+
   for (const { re, dim } of dimTokenRe) {
     const m = work.match(re)
     if (!m) continue
@@ -417,20 +441,41 @@ function smartParseText(text) {
     const before = start === 0 ? '' : work[start - 1]
     const after = end >= work.length ? '' : work[end]
     const rest = work.slice(end)
+    const head = work.slice(0, start)
+
     // 「末地传送门」「下界 门」等：维度词与门粘连/紧邻 → 不记维度
     if (!isBoundary(after) && portalLike.test(rest)) continue
     if (isBoundary(before) && isBoundary(after) && portalLike.test(rest.replace(/^\s+/, ''))) continue
+
     const gluedToCoords = isBoundary(before) && isCoordLead(rest)
     const independent = isBoundary(before) && isBoundary(after)
+    const locPhrase = locPrepBefore.test(head) && (isBoundary(after) || isCoordLead(rest) || !after)
     const namePrefix = start === 0 && !isBoundary(after) && !isCoordLead(rest) && placeSuffix.test(rest)
-    if (independent || gluedToCoords) {
+    // 嵌在其它汉字中间（如「xxx末地yyy」），且非名称前缀/门类
+    const embeddedInCjk = (isCjk(before) || isCjk(after)) && !namePrefix
+
+    if (independent || gluedToCoords || locPhrase) {
       dimension = dim
-      work = work.slice(0, start) + ' ' + work.slice(end)
+      dimensionConfidence = 'strong'
+      // 定位短语：一并剥掉「在/位于/on」等介词，避免名称残留「在」「位于」
+      let cutStart = start
+      if (locPhrase) {
+        const prep = head.match(/(?:在|位于|處|处|to|at|in|on)\s*$/i)
+        if (prep) cutStart = start - prep[0].length
+      }
+      work = work.slice(0, cutStart) + ' ' + work.slice(end)
       break
     }
     if (namePrefix) {
       // 只记录维度，不从名称中删除（「下界要塞」保持完整）
       dimension = dim
+      dimensionConfidence = 'strong'
+      break
+    }
+    if (embeddedInCjk) {
+      // 弱信号：展示给用户，默认不勾选
+      dimension = dim
+      dimensionConfidence = 'weak'
       break
     }
   }
@@ -482,7 +527,7 @@ function smartParseText(text) {
     name = work.replace(/\s+/g, ' ').trim()
   }
 
-  return { name, coords, dimension, note }
+  return { name, coords, dimension, dimensionConfidence, note }
 }
 
 function openParseDialog() {
@@ -492,11 +537,11 @@ function openParseDialog() {
   // 默认勾选策略：
   // - 坐标：有则勾选
   // - 名称：解析出名称时勾选；若表单已有不同名称仍默认勾选（用户可取消）
-  // - 维度：仅当解析出维度时默认勾选
+  // - 维度：仅 strong 默认勾选；weak（嵌在中文名里）默认不勾，对话框标黄提示
   // - 备注：有剩余文本才默认勾选；若表单已有备注则默认不勾，避免误覆盖
   applyFlags.coords = !!result.coords
   applyFlags.name = !!result.name
-  applyFlags.dimension = !!result.dimension
+  applyFlags.dimension = !!result.dimension && result.dimensionConfidence === 'strong'
   applyFlags.note = !!result.note && !form.note.trim()
 
   showParseDialog.value = true
@@ -839,6 +884,14 @@ function openIssue() {
   opacity: 0.45;
   cursor: not-allowed;
 }
+.parse-row--warn {
+  border-color: #8a6a20;
+  background: #1c170c;
+}
+.parse-row--warn:has(input:checked) {
+  border-color: #b0892a;
+  background: #241c0e;
+}
 .parse-row input {
   grid-row: 1 / span 2;
   width: 1rem;
@@ -849,6 +902,28 @@ function openIssue() {
 .parse-val { color: #e8e8e8; min-width: 0; word-break: break-word; }
 .parse-val.mono,
 .parse-cur.mono { font-family: 'Fira Code', monospace; }
+.parse-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: 0.05em;
+}
+.parse-badge--warn {
+  background: #3a2a10;
+  color: #fbbf24;
+  border: 1px solid #8a6a20;
+}
+.parse-hint {
+  grid-column: 3;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  min-width: 0;
+  word-break: break-word;
+}
+.parse-hint--warn { color: #fbbf24; }
 .parse-cur {
   grid-column: 3;
   color: #666;
@@ -856,6 +931,7 @@ function openIssue() {
   min-width: 0;
   word-break: break-word;
 }
+
 
 @media (max-width: 480px) {
   .action-row { flex-direction: column; }
@@ -865,6 +941,7 @@ function openIssue() {
   }
   .parse-key { grid-column: 2; }
   .parse-val { grid-column: 2; }
+  .parse-hint { grid-column: 2; }
   .parse-cur { grid-column: 2; }
 }
 </style>
