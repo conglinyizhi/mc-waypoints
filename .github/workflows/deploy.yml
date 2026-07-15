@@ -10,13 +10,14 @@ permissions:
   pages: write
   id-token: write
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+# 避免连续 push 互相抢 Pages 部署
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
 
+jobs:
+  build:
+    runs-on: ubuntu-latest
     steps:
       - name: 检出代码 (main)
         uses: actions/checkout@v4
@@ -49,6 +50,17 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      # 偶发：upload 刚结束 API 还查不到 artifact，稍等再部署
+      - name: 等待 artifact 就绪
+        run: sleep 5
 
       - name: 部署
         id: deploy
