@@ -291,11 +291,12 @@ jobs:
         env:
           COMMENT: ${{ github.event.comment.body }}
         run: |
-          # 先匹配拒绝词：中文「不通过」包含「通过」，顺序反了会误判为通过
+          # 整段评论 trim 后必须整句是口令，避免正文顺口 ok 误触发
           LOWER=$(echo "$COMMENT" | tr '[:upper:]' '[:lower:]' | tr -d '\r')
-          if echo "$LOWER" | grep -qE '不通过|fail|拒绝|reject|(^|[[:space:]])no($|[[:space:]])'; then
+          TRIMMED=$(echo "$LOWER" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+          if echo "$TRIMMED" | grep -qE '^(不通过|fail|拒绝|reject|no)$'; then
             echo "result=rejected" >> $GITHUB_OUTPUT
-          elif echo "$LOWER" | grep -qE '通过|(^|[[:space:]])ok($|[[:space:]])|approve'; then
+          elif echo "$TRIMMED" | grep -qE '^(通过|ok|approve|approved|lgtm)$'; then
             echo "result=approved" >> $GITHUB_OUTPUT
           else
             echo "result=ignored" >> $GITHUB_OUTPUT
