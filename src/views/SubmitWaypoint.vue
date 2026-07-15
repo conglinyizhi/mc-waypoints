@@ -62,10 +62,11 @@
         <label class="field-half">
           <span class="label-text">维度 <em class="req">*</em></span>
           <select ref="dimensionRef" v-model="form.dimension" data-name="submit-dimension" @keydown.enter.prevent="focusNext(2)">
-            <option value="overworld">主世界</option>
-            <option value="nether">下界</option>
-            <option value="end">末地</option>
+            <option value="overworld">🟢 主世界（Overworld）</option>
+            <option value="nether">🔴 下界 / 地狱（Nether）</option>
+            <option value="end">🟣 末地（The End）</option>
           </select>
+          <span class="field-hint field-hint--dim">下界 = 地狱 = Nether；末地 = The End，不是地狱</span>
         </label>
 
         <!-- 备注 -->
@@ -356,7 +357,11 @@ const previewTitle = computed(() => {
 })
 
 function dimLabel(d) {
-  const map = { overworld: '主世界', nether: '下界', end: '末地' }
+  const map = {
+    overworld: '🟢 主世界（Overworld）',
+    nether: '🔴 下界 / 地狱（Nether）',
+    end: '🟣 末地（The End）'
+  }
   return map[d] || d
 }
 
@@ -642,6 +647,7 @@ function openIssue() {
 .field-hint { font-size: 0.73rem; margin-top: 0.1rem; }
 .field-hint--ok { color: #5fdc5f; font-family: 'Fira Code', monospace; }
 .field-hint--err { color: #f87171; }
+.field-hint--dim { color: #6b7280; line-height: 1.4; }
 
 /* 预览 */
 .preview-box {

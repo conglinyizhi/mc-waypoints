@@ -16,9 +16,9 @@
           <label>Z <input v-model.number="form.z" type="number" placeholder="1024" /></label>
           <label>维度
             <select v-model="form.dimension">
-              <option value="overworld">主世界</option>
-              <option value="nether">下界</option>
-              <option value="end">末地</option>
+              <option value="overworld">🟢 主世界（Overworld）</option>
+              <option value="nether">🔴 下界 / 地狱（Nether）</option>
+              <option value="end">🟣 末地（The End）</option>
             </select>
           </label>
           <label>分类 <input v-model="form.category" placeholder="家 / 农场 / 交易中心…" /></label>

@@ -110,7 +110,7 @@ const dimFilter = ref('')
 const dimFilters = [
   { label: '全部', value: '' },
   { label: '🟢 主世界', value: 'overworld' },
-  { label: '🔴 下界', value: 'nether' },
+  { label: '🔴 下界/地狱', value: 'nether' },
   { label: '🟣 末地', value: 'end' }
 ]
 
@@ -139,7 +139,11 @@ const filtered = computed(() => {
 
 // --- 辅助 ---
 function dimLabel(d) {
-  const map = { overworld: '主世界', nether: '下界', end: '末地' }
+  const map = {
+    overworld: '主世界',
+    nether: '下界/地狱',
+    end: '末地'
+  }
   return map[d] || d || '—'
 }
 

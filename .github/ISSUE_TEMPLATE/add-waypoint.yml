@@ -32,7 +32,7 @@ body:
     id: dimension
     attributes:
       label: 维度
-      description: "填写 overworld / nether / end（也可用 主世界、下界、末地）"
+      description: "填写 overworld / nether / end。中文别名：主世界；下界/地狱；末地（The End，不是地狱）"
       placeholder: overworld
     validations:
       required: true
