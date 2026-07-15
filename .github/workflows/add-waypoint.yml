@@ -257,12 +257,23 @@ jobs:
         id: gate
         run: |
           set -euo pipefail
+          STATE=$(gh issue view "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --json state \
+            --jq '.state')
           LABELS=$(gh issue view "${{ github.event.issue.number }}" \
             --repo "${{ github.repository }}" \
             --json labels \
             --jq '[.labels[].name] | join(",")')
+          echo "live_state=$STATE"
           echo "live_labels=$LABELS"
-          if echo ",$LABELS," | grep -qE ',(ci:processed|ci:approved|ci:rejected),'; then
+          if [ "$STATE" != "OPEN" ]; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "Issue 已关闭（state=$STATE），跳过"
+          elif ! echo ",$LABELS," | grep -q ',ci:add_waypoint,'; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "非新增坐标单（缺少 ci:add_waypoint），跳过"
+          elif echo ",$LABELS," | grep -qE ',(ci:processed|ci:approved|ci:rejected),'; then
             echo "proceed=false" >> "$GITHUB_OUTPUT"
             echo "审核已结束（标签: $LABELS），跳过"
           elif ! echo ",$LABELS," | grep -q ',ci:pending,'; then
