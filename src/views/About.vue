@@ -117,6 +117,21 @@
         data-name="open-dev-tools-btn"
         class="label-btn label-btn--util home-view-btn"
       >打开开发者工具 →</router-link>
+      <a
+        v-if="repo"
+        :href="ciKillSwitchUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        data-name="ci-kill-switch-btn"
+        class="label-btn label-btn--danger home-view-btn"
+        title="在 GitHub Variables 中将 CI_DISABLED 设为 true，可立刻停掉全部相关 workflow"
+      >🛑 急停全部 CI：设 CI_DISABLED = true</a>
+      <p v-if="repo" class="hint hint--tight">
+        打开仓库 Actions Variables，新建或编辑变量 <code>CI_DISABLED</code>，值改为
+        <code>true</code> 后，新增/报错/部署等依赖该开关的流程会全部跳过；恢复时改回
+        <code>false</code>。
+      </p>
+      <p v-else class="hint hint--tight">未配置 github_repo，无法生成急停链接。</p>
     </div>
   </div>
 </template>
@@ -155,6 +170,10 @@ const repo = computed(() => {
   return r && r !== 'yourname/yourrepo' ? `https://github.com/${r}` : null
 })
 const repoText = computed(() => config.value?.github_repo || '—')
+/** GitHub Actions Variables 页：维护者在此改 CI_DISABLED */
+const ciKillSwitchUrl = computed(() =>
+  repo.value ? `${repo.value}/settings/variables/actions` : '#'
+)
 </script>
 
 <style scoped lang="scss">
@@ -484,5 +503,31 @@ const repoText = computed(() => config.value?.github_repo || '—')
   margin-top: 0.35rem;
   background: transparent;
   box-sizing: border-box;
+}
+
+.label-btn--danger {
+  border-color: $danger-border;
+  color: $danger;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.8rem;
+
+  &:hover {
+    background: $danger-bg;
+    opacity: 1;
+  }
+}
+
+.hint--tight {
+  margin-top: 0.55rem;
+  margin-bottom: 0;
+
+  code {
+    font-family: $font-mono;
+    font-size: 0.78rem;
+    color: $gold;
+    background: $bg-code;
+    padding: 0.05rem 0.3rem;
+    border-radius: 3px;
+  }
 }
 </style>
