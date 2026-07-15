@@ -131,6 +131,8 @@ jobs:
           Closes #${{ github.event.issue.number }}"
           git push origin data
           git checkout main
+          # GITHUB_TOKEN 推送不会级联触发其它 workflow，需显式唤醒 Pages 部署
+          gh workflow run "构建部署" --repo "${{ github.repository }}" || true
 
       - name: 直接写入完成
         if: >
@@ -354,6 +356,8 @@ jobs:
           Closes #${{ github.event.issue.number }}"
           git push origin data
           git checkout main
+          # GITHUB_TOKEN 推送不会级联触发其它 workflow，需显式唤醒 Pages 部署
+          gh workflow run "构建部署" --repo "${{ github.repository }}" || true
 
       - name: 评论并关闭
         if: steps.gate.outputs.proceed == 'true' && steps.review.outputs.result == 'approved'
