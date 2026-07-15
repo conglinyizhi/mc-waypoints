@@ -63,6 +63,25 @@ function isMaintainer(authorAssoc) {
   return ['OWNER', 'COLLABORATOR', 'MEMBER'].includes(authorAssoc)
 }
 
+/**
+ * 归一化维度字段
+ * 兼容：overworld | 主世界 (overworld) | 主世界 | nether/下界/地狱 | end/末地
+ */
+function normalizeDimension(raw) {
+  const s = String(raw || '').trim()
+  if (!s) return ''
+  const paren = s.match(/\((\w+)\)/)
+  if (paren && ['overworld', 'nether', 'end'].includes(paren[1].toLowerCase())) {
+    return paren[1].toLowerCase()
+  }
+  const lower = s.toLowerCase()
+  if (['overworld', 'nether', 'end'].includes(lower)) return lower
+  if (/主\s*世界|overworld|\bow\b/i.test(s)) return 'overworld'
+  if (/下\s*界|地\s*狱|nether/i.test(s)) return 'nether'
+  if (/末\s*地|\bend\b/i.test(s)) return 'end'
+  return s
+}
+
 // ====================== parse 模式 ======================
 
 function doParse() {
@@ -74,9 +93,8 @@ function doParse() {
   const dimensionRaw = parseField(body, '维度')
   const note = parseField(body, '备注')
 
-  // 提取维度值 "主世界 (overworld)" → "overworld"
-  const dimMatch = dimensionRaw.match(/\((\w+)\)/)
-  const dimension = dimMatch ? dimMatch[1] : dimensionRaw
+  // 维度兼容纯键与历史中文选项
+  const dimension = normalizeDimension(dimensionRaw)
 
   // 检测 ci:review
   const debug = /\[x\].*ci:review/i.test(body)

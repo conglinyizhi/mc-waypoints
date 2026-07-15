@@ -30,10 +30,13 @@ body:
     id: dimension
     attributes:
       label: 维度
+      description: "选择维度（URL 预填使用 overworld / nether / end）"
       options:
-        - 主世界 (overworld)
-        - 下界 (nether)
-        - 末地 (end)
+        # 选项文本必须是纯键：GitHub Issue Form 的 ?dimension= 预填需与 option 完全一致，
+        # 中文选项（如「主世界 (overworld)」）在实践中经常匹配失败。
+        - overworld
+        - nether
+        - end
     validations:
       required: true
 
