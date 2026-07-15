@@ -369,6 +369,7 @@ function coordsText(c) {
  * 支持：
  *   大叔牌沼泽刷怪塔X2725 Y64 Z5950
  *   猪人塔 x: -120 y: 80 z: 340 下界
+ *   疣猪兽农场（产出熟猪肉） 地狱X90 Y128 Z-262
  *   X=1, Y=2, Z=3 主世界 我家门口
  *   末地船 100 70 -200
  */
@@ -386,14 +387,17 @@ function smartParseText(text) {
 
   // 维度词摘取策略（避免「末地船」被切碎）：
   // 1) 独立词：两侧为边界（空白/标点/串端）→ 记维度并从文本中移除
-  // 2) 名称前缀：串首「下界要塞」「主世界基地」等（维度词+常见后缀）→ 记维度但保留全名
-  // 3) 不匹配无边界粘连（「末地船」只当名称）
+  // 2) 紧贴坐标：如「地狱X90」「下界X90 Y…」→ 记维度并移除维度词
+  // 3) 名称前缀：串首「下界要塞」「主世界基地」等（维度词+常见后缀）→ 记维度但保留全名
+  // 4) 不匹配无边界粘连（「末地船」只当名称）
   const dimTokenRe = [
     { re: /(主\s*世界|overworld)/i, dim: 'overworld' },
     { re: /(下\s*界|地\s*狱|nether)/i, dim: 'nether' },
     { re: /(末\s*地|the\s*end|\bend\b)/i, dim: 'end' }
   ]
   const placeSuffix = /^(要塞|门|传送门|门户|基地|家|城|村|塔|矿|洞|港|站|点|农场|交易所|刷怪|刷铁|仓库|中枢|枢纽)/
+  // 维度后紧跟坐标轴：地狱X90 / netherX:1 / 下界 x 2
+  const isCoordLead = (s) => /^[xXyYzZ]\s*[:=：]?\s*-?\d/.test(s)
   const isBoundary = (ch) => !ch || /[\s,，、:：;；|｜\-_/（）()【】\[\]]/.test(ch)
   for (const { re, dim } of dimTokenRe) {
     const m = work.match(re)
@@ -402,10 +406,11 @@ function smartParseText(text) {
     const end = start + m[0].length
     const before = start === 0 ? '' : work[start - 1]
     const after = end >= work.length ? '' : work[end]
-    const independent = isBoundary(before) && isBoundary(after)
     const rest = work.slice(end)
-    const namePrefix = start === 0 && !isBoundary(after) && placeSuffix.test(rest)
-    if (independent) {
+    const gluedToCoords = isBoundary(before) && isCoordLead(rest)
+    const independent = isBoundary(before) && isBoundary(after)
+    const namePrefix = start === 0 && !isBoundary(after) && !isCoordLead(rest) && placeSuffix.test(rest)
+    if (independent || gluedToCoords) {
       dimension = dim
       work = work.slice(0, start) + ' ' + work.slice(end)
       break
