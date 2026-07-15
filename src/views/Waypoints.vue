@@ -53,27 +53,77 @@
             <td class="col-note">{{ wp.note || '—' }}</td>
             <td class="col-contributor">{{ wp.contributor || '—' }}</td>
             <td class="col-actions">
-              <button
-                data-name="copy-coord-btn"
-                class="copy-btn"
-                title="复制坐标"
-                :class="{ 'copy-btn--ok': copiedId === `${wp.id}-coord` }"
-                @click="doCopy(`${wp.x} ${wp.y} ${wp.z}`, `${wp.id}-coord`)"
-              >{{ copiedId === `${wp.id}-coord` ? '✓' : '📋' }}</button>
-              <button
-                data-name="copy-tp-btn"
-                class="copy-btn"
-                title="复制 /tp 指令"
-                :class="{ 'copy-btn--ok': copiedId === `${wp.id}-tp` }"
-                @click="doCopy(`/tp ${wp.x} ${wp.y} ${wp.z}`, `${wp.id}-tp`)"
-              >{{ copiedId === `${wp.id}-tp` ? '✓' : '/tp' }}</button>
-              <button
-                data-name="report-waypoint-btn"
-                class="copy-btn report-btn"
-                title="发起报错 Issue"
-                :disabled="!repoConfigured"
-                @click="openReportIssue(wp)"
-              >⚠️ 报错</button>
+              <!-- 宽屏：三按钮横排 -->
+              <div class="actions-inline" data-name="actions-inline">
+                <button
+                  data-name="copy-coord-btn"
+                  class="copy-btn"
+                  title="复制坐标"
+                  :class="{ 'copy-btn--ok': copiedId === `${wp.id}-coord` }"
+                  @click="doCopy(`${wp.x} ${wp.y} ${wp.z}`, `${wp.id}-coord`)"
+                >{{ copiedId === `${wp.id}-coord` ? '✓' : '📋' }}</button>
+                <button
+                  data-name="copy-tp-btn"
+                  class="copy-btn"
+                  title="复制 /tp 指令"
+                  :class="{ 'copy-btn--ok': copiedId === `${wp.id}-tp` }"
+                  @click="doCopy(`/tp ${wp.x} ${wp.y} ${wp.z}`, `${wp.id}-tp`)"
+                >{{ copiedId === `${wp.id}-tp` ? '✓' : '/tp' }}</button>
+                <button
+                  data-name="report-waypoint-btn"
+                  class="copy-btn report-btn"
+                  title="发起报错 Issue"
+                  :disabled="!repoConfigured"
+                  @click="openReportIssue(wp)"
+                >⚠️ 报错</button>
+              </div>
+
+              <!-- 窄屏：… 折叠菜单 -->
+              <div
+                class="actions-compact"
+                data-name="actions-compact"
+                @mouseleave="closeActionsMenu"
+              >
+                <button
+                  type="button"
+                  data-name="actions-more-btn"
+                  class="copy-btn more-btn"
+                  title="更多操作"
+                  :aria-expanded="openMenuId === wp.id"
+                  @click.stop="toggleActionsMenu(wp.id)"
+                >⋯</button>
+                <div
+                  v-if="openMenuId === wp.id"
+                  class="actions-dropdown"
+                  data-name="actions-dropdown"
+                  role="menu"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-name="copy-coord-btn"
+                    class="copy-btn dropdown-item"
+                    :class="{ 'copy-btn--ok': copiedId === `${wp.id}-coord` }"
+                    @click="onMenuCopy(`${wp.x} ${wp.y} ${wp.z}`, `${wp.id}-coord`)"
+                  >{{ copiedId === `${wp.id}-coord` ? '✓ 已复制' : '📋 复制坐标' }}</button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-name="copy-tp-btn"
+                    class="copy-btn dropdown-item"
+                    :class="{ 'copy-btn--ok': copiedId === `${wp.id}-tp` }"
+                    @click="onMenuCopy(`/tp ${wp.x} ${wp.y} ${wp.z}`, `${wp.id}-tp`)"
+                  >{{ copiedId === `${wp.id}-tp` ? '✓ 已复制' : '/tp 复制指令' }}</button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-name="report-waypoint-btn"
+                    class="copy-btn report-btn dropdown-item"
+                    :disabled="!repoConfigured"
+                    @click="onMenuReport(wp)"
+                  >⚠️ 报错</button>
+                </div>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -105,7 +155,7 @@
 </template>
 
 <script setup>
-import { ref, computed, inject } from 'vue'
+import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
 import { useClipboard } from '../composables/useClipboard.js'
 
 const waypoints = inject('waypoints')
@@ -114,6 +164,31 @@ const { copy, copiedId } = useClipboard()
 
 const repoConfigured = computed(() => {
   return !!(config.value?.github_repo && config.value.github_repo !== 'yourname/yourrepo')
+})
+
+// 窄屏操作菜单：同一时间只开一行
+const openMenuId = ref(null)
+
+function toggleActionsMenu(id) {
+  openMenuId.value = openMenuId.value === id ? null : id
+}
+
+function closeActionsMenu() {
+  openMenuId.value = null
+}
+
+function onDocPointerDown(e) {
+  if (!openMenuId.value) return
+  const el = e.target
+  if (el && typeof el.closest === 'function' && el.closest('[data-name="actions-compact"]')) return
+  closeActionsMenu()
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', onDocPointerDown)
+})
+onUnmounted(() => {
+  document.removeEventListener('pointerdown', onDocPointerDown)
 })
 
 // --- 搜索与筛选 ---
@@ -174,6 +249,11 @@ async function doCopy(text, id) {
   await copy(text, id)
 }
 
+async function onMenuCopy(text, id) {
+  await doCopy(text, id)
+  closeActionsMenu()
+}
+
 function openReportIssue(wp) {
   if (!repoConfigured.value) return
   const repo = config.value.github_repo
@@ -189,6 +269,11 @@ function openReportIssue(wp) {
   if (coords) url += `&coords=${coords}`
   if (dimension) url += `&dimension=${dimension}`
   window.open(url, '_blank')
+}
+
+function onMenuReport(wp) {
+  openReportIssue(wp)
+  closeActionsMenu()
 }
 </script>
 
@@ -271,7 +356,60 @@ function openReportIssue(wp) {
   color: #999;
 }
 .col-contributor { color: #888; }
-.col-actions { display: flex; gap: 0.3rem; flex-wrap: wrap; align-items: center; }
+.col-actions {
+  position: relative;
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  overflow: visible;
+}
+.actions-inline {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.actions-compact {
+  display: none;
+  position: relative;
+}
+.more-btn {
+  min-width: 2.2em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+.actions-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 40;
+  min-width: 9.5rem;
+  padding: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: #16162c;
+  border: 1px solid #3a3a5a;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+.dropdown-item {
+  width: 100%;
+  min-width: 0;
+  justify-content: flex-start;
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* 窄屏折叠为 … 菜单 */
+@media (max-width: 720px) {
+  .actions-inline { display: none; }
+  .actions-compact { display: block; }
+  .col-note { max-width: 120px; }
+}
 
 /* ===== 维度着色（名称前缀） ===== */
 .name-with-dim.dim-ow { color: #86efac; }
