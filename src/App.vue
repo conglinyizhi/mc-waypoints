@@ -61,7 +61,7 @@
           :to="tab.to"
           data-name="nav-tab"
           class="nav-tab"
-          active-class="nav-tab--active"
+          :class="{ 'nav-tab--active': isTabActive(tab) }"
         >
           {{ tab.label }}
         </router-link>
@@ -85,17 +85,33 @@
 
 <script setup>
 import { computed, provide, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useDataFetch } from './composables/useDataFetch.js'
 import { useTheme } from './composables/useTheme.js'
 
+const route = useRoute()
+
+/**
+ * 导航精简：
+ * - 首页：坐标表 / 卡片列表
+ * - 参与：提交坐标 + 待办（名称可再改）
+ * - 小工具：公告 + 下界换算
+ * - 关于
+ */
 const tabs = [
-  { to: '/', label: '🗺️ 坐标点' },
-  { to: '/submit', label: '➕ 提交' },
-  { to: '/server', label: '📋 待办' },
-  { to: '/announcement', label: '📢 公告' },
-  { to: '/converter', label: '🔢 下界换算' },
-  { to: '/about', label: 'ℹ️ 关于' }
+  { to: '/', label: '🏠 首页', match: ['waypoints', 'waypoints-mobile', 'report'] },
+  { to: '/contribute', label: '✍️ 参与', match: ['contribute'] },
+  { to: '/tools', label: '🧰 小工具', match: ['tools'] },
+  { to: '/about', label: 'ℹ️ 关于', match: ['about'] }
 ]
+
+function isTabActive(tab) {
+  const name = route.name
+  if (tab.match?.includes(name)) return true
+  // 兼容仅 path 匹配
+  if (tab.to === '/' && (route.path === '/' || route.path === '/m' || route.path.startsWith('/report'))) return true
+  return false
+}
 
 const { waypoints, config, loading, error, reload } = useDataFetch()
 const { themeLabel, themeIcon, themeTitle, cycleTheme } = useTheme()

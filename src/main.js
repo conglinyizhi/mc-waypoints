@@ -6,22 +6,22 @@ import './styles/index.scss'
 // 懒加载路由
 const Waypoints = () => import('./views/Waypoints.vue')
 const WaypointsMobile = () => import('./views/WaypointsMobile.vue')
-const ServerInfo = () => import('./views/ServerInfo.vue')
-const Announcement = () => import('./views/Announcement.vue')
-const Converter = () => import('./views/Converter.vue')
-const SubmitWaypoint = () => import('./views/SubmitWaypoint.vue')
-const ReportWaypoint = () => import('./views/ReportWaypoint.vue')
+const Contribute = () => import('./views/Contribute.vue')
+const Tools = () => import('./views/Tools.vue')
 const About = () => import('./views/About.vue')
 
 const routes = [
   { path: '/', name: 'waypoints', component: Waypoints },
   { path: '/m', name: 'waypoints-mobile', component: WaypointsMobile },
-  { path: '/submit', name: 'submit', component: SubmitWaypoint },
-  { path: '/report', name: 'report', component: ReportWaypoint },
-  { path: '/server', name: 'server', component: ServerInfo },
-  { path: '/announcement', name: 'announcement', component: Announcement },
-  { path: '/converter', name: 'converter', component: Converter },
-  { path: '/about', name: 'about', component: About }
+  { path: '/contribute', name: 'contribute', component: Contribute },
+  { path: '/tools', name: 'tools', component: Tools },
+  { path: '/about', name: 'about', component: About },
+  // 旧路径兼容 → 合并页 + tab
+  { path: '/submit', redirect: { name: 'contribute', query: { tab: 'submit' } } },
+  { path: '/server', redirect: { name: 'contribute', query: { tab: 'todo' } } },
+  { path: '/announcement', redirect: { name: 'tools', query: { tab: 'announcement' } } },
+  { path: '/converter', redirect: { name: 'tools', query: { tab: 'converter' } } },
+  { path: '/report', name: 'report', component: () => import('./views/ReportWaypoint.vue') }
 ]
 
 // dev 管理页面仅在开发模式下注册
