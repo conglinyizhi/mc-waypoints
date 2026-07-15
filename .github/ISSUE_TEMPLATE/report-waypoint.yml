@@ -1,85 +1,116 @@
 name: 坐标报错 / 纠错
-description: 报告错误坐标、过时地点或建议修正
+description: 报告错误坐标并建议修正（网页表单会自动预填）
 title: "[报错] "
-labels: ["waypoint-report"]
+labels: ["ci:report_waypoint"]
 body:
   - type: markdown
     attributes:
       value: |
-        > 用于反馈坐标簿中某条记录有误（坐标错、维度错、已拆除、名称笔误等）。
-        > 从网页「操作 → 报错」打开时会自动填入该条记录信息。
+        > 从网页「操作 → 报错」打开时会自动填入记录信息。
+        > 维护者审核通过后回复 `通过` / `ok`，CI 会按下方字段自动改 data 分支。
 
   - type: input
     id: waypoint_id
     attributes:
       label: 记录 ID
-      description: 坐标点在数据中的 id（网页自动填入，可留空）
+      description: 坐标点 id（网页自动填入，必填）
       placeholder: ci-1784112896-8
-    validations:
-      required: false
-
-  - type: input
-    id: name
-    attributes:
-      label: 名称
-      description: 有问题的坐标点名称
-      placeholder: 我家
     validations:
       required: true
 
   - type: input
-    id: coords
+    id: current_name
     attributes:
-      label: 当前记录坐标
-      description: 页面上显示的 X Y Z（网页自动填入）
+      label: 当前名称
+      description: 仅供对照（网页自动填入）
+      placeholder: 我家
+    validations:
+      required: false
+
+  - type: input
+    id: current_coords
+    attributes:
+      label: 当前坐标
+      description: "当前 X Y Z（网页自动填入）"
       placeholder: "-512 64 1024"
     validations:
       required: false
 
   - type: input
-    id: dimension
+    id: current_dimension
     attributes:
-      label: 当前记录维度
-      description: "overworld / nether / end（也可用 主世界、下界/地狱、末地）"
+      label: 当前维度
+      description: overworld / nether / end
       placeholder: overworld
     validations:
       required: false
 
-  - type: dropdown
-    id: problem_type
+  - type: input
+    id: current_note
     attributes:
-      label: 问题类型
+      label: 当前备注
+      description: 网页自动填入
+    validations:
+      required: false
+
+  - type: dropdown
+    id: action
+    attributes:
+      label: 操作类型
+      description: update=按下方新字段修正；delete=删除整条记录
       options:
-        - 坐标错误（XYZ 不准）
-        - 维度错误
-        - 名称错误 / 笔误
-        - 地点已拆除 / 不存在
-        - 重复记录
-        - 其他
+        - update
+        - delete
     validations:
       required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ### 修正内容
+        操作类型为 `update` 时：下面各「新*」字段**有填写则覆盖**，留空（`_No response_`）表示不改该项。
+
+  - type: input
+    id: new_name
+    attributes:
+      label: 新名称
+      description: 留空表示不修改名称
+      placeholder: 正确名称
+
+  - type: input
+    id: new_coords
+    attributes:
+      label: 新坐标
+      description: "留空表示不修改。格式：X Y Z 或 X,Y,Z"
+      placeholder: "100 64 -200"
+
+  - type: input
+    id: new_dimension
+    attributes:
+      label: 新维度
+      description: 留空表示不修改。overworld / nether / end（或主世界、下界/地狱、末地）
+      placeholder: nether
+
+  - type: input
+    id: new_note
+    attributes:
+      label: 新备注
+      description: 留空表示不修改；填写 `-` 可清空备注
+      placeholder: 补充说明
 
   - type: textarea
     id: detail
     attributes:
       label: 问题说明
-      description: 尽量写清错在哪、正确应该是什么
-      placeholder: |
-        例如：实际坐标应为 100 64 -200，当前记录偏了约 30 格。
-        或：该建筑已拆除，建议删除此条。
+      description: 错在哪、为何要改（审核参考）
+      placeholder: 实际坐标偏了约 30 格，正确应为 …
     validations:
       required: true
 
-  - type: input
-    id: suggested_coords
+  - type: checkboxes
+    id: debug
     attributes:
-      label: 建议修正坐标（选填）
-      description: "若知道正确坐标，填 X Y Z"
-      placeholder: "100 64 -200"
-
-  - type: input
-    id: suggested_dimension
-    attributes:
-      label: 建议修正维度（选填）
-      description: overworld / nether / end
-      placeholder: nether
+      label: 调试选项（仅维护者）
+      description: 勾选后即使是维护者也走完整审核，不直接写入
+      options:
+        - label: ci:review

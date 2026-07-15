@@ -119,7 +119,6 @@
                     role="menuitem"
                     data-name="report-waypoint-btn"
                     class="copy-btn report-btn dropdown-item"
-                    :disabled="!repoConfigured"
                     @click="onMenuReport(wp)"
                   >⚠️ 报错</button>
                 </div>
@@ -156,10 +155,12 @@
 
 <script setup>
 import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useClipboard } from '../composables/useClipboard.js'
 
 const waypoints = inject('waypoints')
 const config = inject('config')
+const router = useRouter()
 const { copy, copiedId } = useClipboard()
 
 const repoConfigured = computed(() => {
@@ -255,20 +256,9 @@ async function onMenuCopy(text, id) {
 }
 
 function openReportIssue(wp) {
-  if (!repoConfigured.value) return
-  const repo = config.value.github_repo
-  const title = encodeURIComponent(`[报错] ${wp.name || '未命名'}`)
-  const waypoint_id = encodeURIComponent(wp.id || '')
-  const name = encodeURIComponent(wp.name || '')
-  const coords = encodeURIComponent(`${wp.x} ${wp.y} ${wp.z}`)
-  const dimension = encodeURIComponent(wp.dimension || '')
-  // problem_type / detail 留给用户在 GitHub 表单里选填
-  let url = `https://github.com/${repo}/issues/new?template=report-waypoint.yml&labels=waypoint-report&title=${title}`
-  if (waypoint_id) url += `&waypoint_id=${waypoint_id}`
-  if (name) url += `&name=${name}`
-  if (coords) url += `&coords=${coords}`
-  if (dimension) url += `&dimension=${dimension}`
-  window.open(url, '_blank')
+  // 先进入站内报错页勾选字段，再由该页打开 GitHub Issue
+  if (!wp?.id) return
+  router.push({ name: 'report', query: { id: wp.id } })
 }
 
 function onMenuReport(wp) {
@@ -276,6 +266,7 @@ function onMenuReport(wp) {
   closeActionsMenu()
 }
 </script>
+
 
 <style scoped lang="scss">
 @use '../styles/tokens' as *;

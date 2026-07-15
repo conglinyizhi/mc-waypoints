@@ -68,6 +68,7 @@ const repoText = computed(() => config.value.github_repo || '—')
 
 const ciLabels = [
   { name: 'ci:add_waypoint', color: '#5fdc5f' },
+  { name: 'ci:report_waypoint', color: '#fbbf24' },
   { name: 'ci:pending', color: '#f0ad4e' },
   { name: 'ci:review', color: '#60a5fa' },
   { name: 'ci:approved', color: '#2ea043' },
