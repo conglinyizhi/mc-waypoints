@@ -27,6 +27,20 @@ data  ── waypoints.jsonl（坐标数据，CI 唯一写入目标）
 - 本地开发 `main` 永远不会和 CI 数据写入冲突
 - 示例坐标数据在 `public/data/waypoints.example.jsonl`，供格式参考
 
+### `data` 独立数据分支（不要合并进 main）
+
+`data` 是 **orphan 长期分支**，与 `main` **无共同祖先**，只存坐标数据，**不是**功能分支。
+
+| 规则 | 说明 |
+|------|------|
+| 禁止 PR 合入 main | 不要点 GitHub 的 *Compare & pull request* / *data had recent pushes* 去合 `data` → `main` |
+| 写入路径 | 只通过 Issue + CI（或维护者本地 `checkout data` 后改 jsonl）写入 |
+| 读取路径 | 部署 / 校验用 `git fetch origin data` + `git show origin/data:public/data/waypoints.jsonl` |
+| 分支保护 | 仓库 Ruleset `protect-data-branch`：禁止删除 `data`、禁止 force-push（管理员可 bypass） |
+| UI 提示可忽略 | GitHub 对非默认分支的 *had recent pushes* 只是通用提示，不代表需要合并 |
+
+日常开发：默认只在 `main` 上改代码；改坐标走网页提交 / Issue，不必把 `data` 当功能分支 rebase。
+
 ### 待办事项说明
 
 待办事项页面（`#/server`）是纯本地功能——数据存储在浏览器 localStorage 中，**不会同步到服务器**。换设备、换浏览器、或清除浏览器数据后待办会丢失。
@@ -52,8 +66,9 @@ data  ── waypoints.jsonl（坐标数据，CI 唯一写入目标）
 ### 部署触发
 
 - push `main` → 代码变更时自动部署
-- push `data` → CI 写入坐标后自动部署
-- 手动：`gh workflow run deploy.yml`
+- push `data`（人工推送）→ 触发部署，从 data 拉 jsonl
+- CI 用 `GITHUB_TOKEN` 写入 `data` 后**不会**级联触发其他 workflow，脚本里会再执行 `gh workflow run "构建部署"`
+- 手动：`gh workflow run "构建部署"` 或 `gh workflow run deploy.yml`
 
 ### 配置 `public/data/config.json`
 
