@@ -29,10 +29,8 @@
       <table v-if="filtered.length" data-name="waypoint-table" class="waypoint-table">
         <thead>
           <tr>
-            <th>名称</th>
+            <th>[维度]名称</th>
             <th>坐标 (X / Y / Z)</th>
-            <th>维度</th>
-
             <th>备注</th>
             <th>贡献者</th>
             <th>操作</th>
@@ -44,12 +42,14 @@
             :key="wp.id"
             data-name="waypoint-row"
           >
-            <td class="col-name">{{ wp.name }}</td>
+            <td class="col-name">
+              <span class="name-with-dim" :class="dimClass(wp.dimension)" :title="dimLabel(wp.dimension)">
+                <span class="dim-dot" aria-hidden="true">{{ dimEmoji(wp.dimension) }}</span>{{ wp.name }}
+              </span>
+            </td>
             <td class="col-coords">
               <code>{{ wp.x }} / {{ wp.y }} / {{ wp.z }}</code>
             </td>
-            <td><span class="dim-badge" :class="dimClass(wp.dimension)">{{ dimLabel(wp.dimension) }}</span></td>
-
             <td class="col-note">{{ wp.note || '—' }}</td>
             <td class="col-contributor">{{ wp.contributor || '—' }}</td>
             <td class="col-actions">
@@ -160,6 +160,11 @@ function dimLabel(d) {
   return map[d] || d || '—'
 }
 
+function dimEmoji(d) {
+  const map = { overworld: '🟢', nether: '🔴', end: '🟣' }
+  return map[d] || '⚪'
+}
+
 function dimClass(d) {
   const map = { overworld: 'dim-ow', nether: 'dim-nether', end: 'dim-end' }
   return map[d] || ''
@@ -243,6 +248,13 @@ function openReportIssue(wp) {
 .waypoint-table tbody tr:hover { background: #1e1e3a; }
 
 .col-name { font-weight: 600; color: #fff; }
+.name-with-dim {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  max-width: 100%;
+}
+.dim-dot { flex-shrink: 0; font-size: 0.85em; line-height: 1; }
 .col-coords code {
   font-family: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
   font-size: 0.82rem;
@@ -261,17 +273,10 @@ function openReportIssue(wp) {
 .col-contributor { color: #888; }
 .col-actions { display: flex; gap: 0.3rem; flex-wrap: wrap; align-items: center; }
 
-/* ===== 徽章 ===== */
-.dim-badge {
-  display: inline-block;
-  padding: 0.15rem 0.5rem;
-  border-radius: 3px;
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-.dim-ow { background: #1a3a1a; color: #5fdc5f; }
-.dim-nether { background: #3a1a1a; color: #f87171; }
-.dim-end { background: #2a1a3a; color: #c084fc; }
+/* ===== 维度着色（名称前缀） ===== */
+.name-with-dim.dim-ow { color: #86efac; }
+.name-with-dim.dim-nether { color: #fca5a5; }
+.name-with-dim.dim-end { color: #d8b4fe; }
 
 
 /* ===== 复制按钮 ===== */
