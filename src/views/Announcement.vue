@@ -29,17 +29,18 @@ import { inject } from 'vue'
 const config = inject('config')
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use '../styles/tokens' as *;
 .ann-list { display: flex; flex-direction: column; gap: 0.8rem; }
 .ann-card {
-  background: #12122a;
-  border: 1px solid #2a2a4a;
-  border-left: 3px solid #60a5fa;
+  background: $bg-panel;
+  border: 1px solid $border;
+  border-left: 3px solid $info;
   border-radius: 0 6px 6px 0;
   padding: 0.8rem 1rem;
 }
-.ann-header { font-size: 0.8rem; color: #888; margin-bottom: 0.3rem; }
-.ann-date { color: #60a5fa; }
-.ann-body { color: #ccc; line-height: 1.5; }
-.hint { font-size: 0.82rem; color: #666; margin-top: 0.4rem; }
+.ann-header { font-size: 0.8rem; color: $text-faint; margin-bottom: 0.3rem; }
+.ann-date { color: $info; }
+.ann-body { color: $text-muted; line-height: 1.5; }
+.hint { font-size: 0.82rem; color: $text-ghost; margin-top: 0.4rem; }
 </style>

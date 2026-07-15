@@ -142,6 +142,15 @@ export default defineConfig({
   define: {
     __GIT_HASH__: JSON.stringify(gitHash)
   },
+  css: {
+    // 组件内可直接写 $accent 等 token；仍建议显式 @use 以保持可读
+    preprocessorOptions: {
+      scss: {
+        // modern API（sass 1.x 默认）
+        api: 'modern-compiler'
+      }
+    }
+  },
   plugins: [
     vue(),
     {

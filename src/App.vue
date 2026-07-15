@@ -78,59 +78,52 @@ provide('error', error)
 provide('reload', reload)
 </script>
 
-<style>
-/* ===== 全局重置 ===== */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 15px; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
-body { background: #1a1a2e; color: #e0e0e0; min-height: 100vh; }
-a { color: inherit; text-decoration: none; }
+<style lang="scss">
+@use './styles/tokens' as *;
 
-/* ===== Shell 布局 ===== */
+/* Shell 布局（全局 reset 见 styles/index.scss） */
 .app-shell { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
-.app-header { padding: 1rem 0; border-bottom: 2px solid #2a2a4a; }
+.app-header { padding: 1rem 0; border-bottom: 2px solid $border; }
 .app-title-row {
   display: flex;
   align-items: center;
   gap: 0.55rem;
   margin-bottom: 0.6rem;
 }
-.app-title { font-size: 1.4rem; color: #fff; margin: 0; line-height: 1.2; }
+.app-title { font-size: 1.4rem; color: $text-bright; margin: 0; line-height: 1.2; }
 .github-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #9ca3af;
+  color: $text-dim;
   transition: color .15s, transform .15s;
   flex-shrink: 0;
 }
-.github-link:hover { color: #fff; transform: translateY(-1px); }
+.github-link:hover { color: $text-bright; transform: translateY(-1px); }
 .github-icon { display: block; }
 
-/* ===== 导航 ===== */
 .app-nav { display: flex; gap: 0.25rem; flex-wrap: wrap; }
 .nav-tab {
   padding: 0.4rem 0.9rem;
-  border-radius: 6px 6px 0 0;
+  border-radius: $radius-md $radius-md 0 0;
   font-size: 0.9rem;
-  color: #888;
+  color: $text-faint;
   transition: background .15s, color .15s;
 }
-.nav-tab:hover { background: #2a2a4a; color: #ccc; }
-.nav-tab--active { background: #2a2a4a; color: #5fdc5f; font-weight: 600; }
+.nav-tab:hover { background: $border; color: $text-muted; }
+.nav-tab--active { background: $border; color: $accent; font-weight: 600; }
 
-/* ===== 主区域 ===== */
 .app-main { padding: 1.2rem 0; }
 
-/* ===== 状态框 ===== */
-.state-box { text-align: center; padding: 3rem 1rem; color: #999; }
-.state-error { color: #f87171; }
+.state-box { text-align: center; padding: 3rem 1rem; color: $text-soft; }
+.state-error { color: $danger; }
 .state-error button {
   margin-top: 0.8rem;
   padding: 0.4rem 1rem;
-  background: #3a1a1a;
-  border: 1px solid #f87171;
-  color: #f87171;
-  border-radius: 4px;
+  background: $danger-bg-strong;
+  border: 1px solid $danger;
+  color: $danger;
+  border-radius: $radius;
   cursor: pointer;
 }
 </style>

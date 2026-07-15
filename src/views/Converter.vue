@@ -85,35 +85,38 @@ async function doCopy(text, id) {
 }
 </script>
 
-<style scoped>
-.desc { color: #999; font-size: 0.85rem; margin-bottom: 1.5rem; line-height: 1.6; }
-.desc strong { color: #ffd700; }
+<style scoped lang="scss">
+@use '../styles/tokens' as *;
+@use '../styles/mixins' as *;
+@use '../styles/shared' as shared;
+.desc { color: $text-soft; font-size: 0.85rem; margin-bottom: 1.5rem; line-height: 1.6; }
+.desc strong { color: $gold; }
 
 .converter-panels { display: flex; flex-wrap: wrap; gap: 1.2rem; }
 
 .conv-panel {
   flex: 1 1 300px;
-  background: #12122a;
-  border: 1px solid #2a2a4a;
+  background: $bg-panel;
+  border: 1px solid $border;
   border-radius: 8px;
   padding: 1.2rem;
 }
-.conv-panel h3 { font-size: 1rem; margin-bottom: 1rem; color: #fff; }
+.conv-panel h3 { font-size: 1rem; margin-bottom: 1rem; color: $text-bright; }
 
 .input-row { display: flex; gap: 0.8rem; margin-bottom: 1rem; flex-wrap: wrap; }
-.input-row label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; color: #888; }
+.input-row label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; color: $text-faint; }
 .input-row input {
   width: 100px;
   padding: 0.4rem 0.5rem;
-  border: 1px solid #3a3a5a;
+  border: 1px solid $border-strong;
   border-radius: 4px;
-  background: #0a0a1e;
-  color: #e0e0e0;
-  font-family: 'Fira Code', monospace;
+  background: $bg-deep;
+  color: $text;
+  font-family: $font-mono;
   font-size: 0.9rem;
   outline: none;
 }
-.input-row input:focus { border-color: #5fdc5f; }
+.input-row input:focus { border-color: $accent; }
 .label-disabled input { opacity: 0.3; }
 
 .result-row {
@@ -122,28 +125,22 @@ async function doCopy(text, id) {
   gap: 0.5rem;
   flex-wrap: wrap;
   font-size: 0.88rem;
-  color: #ccc;
+  color: $text-muted;
 }
 .result-row output code {
-  font-family: 'Fira Code', monospace;
+  font-family: $font-mono;
   font-size: 1rem;
-  color: #ffd700;
-  background: #1a1a30;
+  color: $gold;
+  background: $bg-code;
   padding: 0.15rem 0.4rem;
   border-radius: 3px;
 }
-.result-row output code.dim { color: #888; font-style: italic; }
+.result-row output code.dim { color: $text-faint; font-style: italic; }
 
+@include shared.copy-btn-block;
 .copy-btn {
   padding: 0.3rem 0.7rem;
-  border: 1px solid #3a3a5a;
-  border-radius: 4px;
-  background: #12122a;
-  color: #aaa;
   font-size: 0.78rem;
-  cursor: pointer;
-  transition: all .15s;
+  min-width: auto;
 }
-.copy-btn:hover { border-color: #5fdc5f; color: #5fdc5f; }
-.copy-btn--ok { border-color: #5fdc5f; color: #5fdc5f; background: #1a3a1a; }
 </style>

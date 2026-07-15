@@ -171,21 +171,22 @@ async function deleteItem(id) {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use '../styles/tokens' as *;
 .manage-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1rem;
 }
-.manage-header h2 { font-size: 1.1rem; color: #ffd700; }
+.manage-header h2 { font-size: 1.1rem; color: $gold; }
 
 .add-btn {
   padding: 0.4rem 0.9rem;
-  border: 1px solid #5fdc5f;
+  border: 1px solid $accent;
   border-radius: 4px;
-  background: #1a3a1a;
-  color: #5fdc5f;
+  background: $accent-bg;
+  color: $accent;
   font-size: 0.85rem;
   cursor: pointer;
 }
@@ -201,26 +202,26 @@ async function deleteItem(id) {
   z-index: 100;
 }
 .form-card {
-  background: #1a1a2e;
-  border: 1px solid #3a3a5a;
+  background: $bg-page;
+  border: 1px solid $border-strong;
   border-radius: 8px;
   padding: 1.5rem;
   width: 90%;
   max-width: 480px;
 }
-.form-card h3 { margin-bottom: 1rem; color: #fff; }
+.form-card h3 { margin-bottom: 1rem; color: $text-bright; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
-.form-grid label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.8rem; color: #888; }
+.form-grid label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.8rem; color: $text-faint; }
 .form-grid input, .form-grid select {
   padding: 0.35rem 0.5rem;
-  border: 1px solid #3a3a5a;
+  border: 1px solid $border-strong;
   border-radius: 4px;
-  background: #0a0a1e;
-  color: #e0e0e0;
+  background: $bg-deep;
+  color: $text;
   font-size: 0.85rem;
   outline: none;
 }
-.form-grid input:focus, .form-grid select:focus { border-color: #5fdc5f; }
+.form-grid input:focus, .form-grid select:focus { border-color: $accent; }
 .form-actions { margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end; }
 .save-btn, .cancel-btn {
   padding: 0.35rem 0.9rem;
@@ -228,29 +229,29 @@ async function deleteItem(id) {
   font-size: 0.85rem;
   cursor: pointer;
 }
-.save-btn { border: 1px solid #5fdc5f; background: #1a3a1a; color: #5fdc5f; }
-.cancel-btn { border: 1px solid #3a3a5a; background: #12122a; color: #aaa; }
+.save-btn { border: 1px solid $accent; background: $accent-bg; color: $accent; }
+.cancel-btn { border: 1px solid $border-strong; background: $bg-panel; color: $text-dim; }
 
 /* 表格 */
 .table-wrap { overflow-x: auto; }
 .waypoint-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .waypoint-table th, .waypoint-table td {
   padding: 0.4rem 0.5rem;
-  border-bottom: 1px solid #1e1e3a;
+  border-bottom: 1px solid $bg-elevated;
   text-align: left;
 }
-.waypoint-table th { color: #aaa; border-bottom: 2px solid #2a2a4a; }
-.waypoint-table code { color: #ffd700; font-family: monospace; }
-.col-id { font-family: monospace; font-size: 0.72rem; color: #666; }
+.waypoint-table th { color: $text-dim; border-bottom: 2px solid $border; }
+.waypoint-table code { color: $gold; font-family: monospace; }
+.col-id { font-family: monospace; font-size: 0.72rem; color: $text-ghost; }
 
 .action-btn {
   padding: 0.2rem 0.4rem;
-  border: 1px solid #3a3a5a;
+  border: 1px solid $border-strong;
   border-radius: 3px;
   background: transparent;
   cursor: pointer;
   font-size: 0.8rem;
 }
-.action-btn:hover { border-color: #5fdc5f; }
-.action-btn--danger:hover { border-color: #f87171; }
+.action-btn:hover { border-color: $accent; }
+.action-btn--danger:hover { border-color: $danger; }
 </style>

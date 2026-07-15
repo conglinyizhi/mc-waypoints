@@ -92,7 +92,8 @@ function remove(i) {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use '../styles/tokens' as *;
 .todo-header {
   display: flex;
   flex-wrap: wrap;
@@ -101,27 +102,27 @@ function remove(i) {
   gap: 0.6rem;
   margin-bottom: 1rem;
 }
-.todo-header h2 { font-size: 1.1rem; color: #fff; }
-.todo-hint { color: #666; font-size: 0.78rem; margin-top: 0.3rem; }
+.todo-header h2 { font-size: 1.1rem; color: $text-bright; }
+.todo-hint { color: $text-ghost; font-size: 0.78rem; margin-top: 0.3rem; }
 
 .todo-actions { display: flex; gap: 0.4rem; }
 .todo-input {
   padding: 0.45rem 0.7rem;
-  border: 1px solid #3a3a5a;
+  border: 1px solid $border-strong;
   border-radius: 6px;
-  background: #12122a;
-  color: #e0e0e0;
+  background: $bg-panel;
+  color: $text;
   font-size: 0.88rem;
   outline: none;
   width: 220px;
 }
-.todo-input:focus { border-color: #5fdc5f; }
+.todo-input:focus { border-color: $accent; }
 .todo-add-btn {
   padding: 0.45rem 0.75rem;
-  border: 1px solid #5fdc5f;
+  border: 1px solid $accent;
   border-radius: 6px;
-  background: #1a3a1a;
-  color: #5fdc5f;
+  background: $accent-bg;
+  color: $accent;
   font-size: 0.9rem;
   cursor: pointer;
 }
@@ -133,12 +134,12 @@ function remove(i) {
   align-items: center;
   gap: 0.5rem;
   padding: 0.55rem 0.8rem;
-  background: #12122a;
-  border: 1px solid #2a2a4a;
+  background: $bg-panel;
+  border: 1px solid $border;
   border-radius: 6px;
   transition: background .15s;
 }
-.todo-item:hover { background: #1a1a30; }
+.todo-item:hover { background: $bg-code; }
 .todo-item--done { opacity: 0.5; }
 
 .todo-check {
@@ -151,18 +152,18 @@ function remove(i) {
 .todo-text {
   flex: 1;
   font-size: 0.9rem;
-  color: #e0e0e0;
+  color: $text;
 }
-.todo-item--done .todo-text { text-decoration: line-through; color: #666; }
+.todo-item--done .todo-text { text-decoration: line-through; color: $text-ghost; }
 
 .todo-del {
   background: none;
   border: none;
-  color: #666;
+  color: $text-ghost;
   font-size: 0.85rem;
   cursor: pointer;
   padding: 0.2rem 0.3rem;
   border-radius: 3px;
 }
-.todo-del:hover { color: #f87171; background: #2a1a1a; }
+.todo-del:hover { color: $danger; background: $danger-bg-soft; }
 </style>

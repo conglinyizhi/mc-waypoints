@@ -1,0 +1,109 @@
+// 跨组件复用的类（在 scoped 中 @use 后仍可写出同名类）
+@use 'tokens' as *;
+@use 'mixins' as *;
+
+@mixin copy-btn-block {
+  .copy-btn {
+    @include btn-chip;
+    min-width: 2.3em;
+  }
+
+  .copy-btn--ok {
+    border-color: $accent;
+    color: $accent;
+    background: $accent-bg;
+  }
+
+  .copy-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+@mixin filter-btn-block {
+  .filter-group {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    padding: 0.3rem 0.65rem;
+    border: 1px solid $border-strong;
+    border-radius: $radius;
+    background: $bg-panel;
+    color: $text-soft;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+
+    &:hover {
+      border-color: $accent;
+      color: $text-muted;
+    }
+
+    &--active {
+      background: $accent-bg;
+      border-color: $accent;
+      color: $accent;
+    }
+  }
+}
+
+@mixin modal-block {
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.62);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 1rem;
+    backdrop-filter: blur(2px);
+  }
+
+  .modal-card {
+    background: $bg-panel-alt;
+    border: 1px solid $border-strong;
+    border-radius: $radius-xl;
+    padding: 1.25rem 1.35rem;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  }
+
+  .modal-card--wide {
+    max-width: 520px;
+  }
+
+  .modal-title {
+    color: $text-bright;
+    font-size: 1.05rem;
+    margin-bottom: 0.7rem;
+  }
+
+  .modal-body {
+    color: $text-dim;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    margin-bottom: 1.1rem;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    @include btn-primary;
+    padding: 0.55rem 1rem;
+    font-size: 0.88rem;
+  }
+
+  .btn-ghost {
+    @include btn-ghost;
+  }
+}

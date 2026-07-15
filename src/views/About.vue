@@ -101,32 +101,33 @@ const searchClosedUrl = computed(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use '../styles/tokens' as *;
 .about-card {
-  background: #12122a;
-  border: 1px solid #2a2a4a;
+  background: $bg-panel;
+  border: 1px solid $border;
   border-radius: 8px;
   padding: 1.2rem 1.5rem;
   margin-bottom: 1rem;
 }
-.about-card h2 { font-size: 1rem; margin-bottom: 0.8rem; color: #fff; }
+.about-card h2 { font-size: 1rem; margin-bottom: 0.8rem; color: $text-bright; }
 
 .info-list { display: grid; grid-template-columns: auto 1fr; gap: 0.4rem 1rem; }
-.info-list dt { color: #888; font-size: 0.85rem; }
-.info-list dd { color: #e0e0e0; font-size: 0.9rem; }
+.info-list dt { color: $text-faint; font-size: 0.85rem; }
+.info-list dd { color: $text; font-size: 0.9rem; }
 .info-list dd code {
-  font-family: 'Fira Code', monospace;
-  background: #1a1a30;
+  font-family: $font-mono;
+  background: $bg-code;
   padding: 0.1rem 0.4rem;
   border-radius: 3px;
-  color: #ffd700;
+  color: $gold;
   font-size: 0.82rem;
 }
 
-.link { color: #60a5fa; }
+.link { color: $info; }
 .link:hover { text-decoration: underline; }
 
-.hint { color: #666; font-size: 0.8rem; margin-bottom: 0.6rem; }
+.hint { color: $text-ghost; font-size: 0.8rem; margin-bottom: 0.6rem; }
 
 .label-btns { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.8rem; }
 .label-btn {
@@ -141,8 +142,8 @@ const searchClosedUrl = computed(() => {
 .label-btn--all {
   display: inline-block;
   margin-top: 0.4rem;
-  border-color: #888;
-  color: #ccc;
+  border-color: $text-faint;
+  color: $text-muted;
   font-size: 0.82rem;
   padding: 0.4rem 0.8rem;
 }
@@ -153,15 +154,15 @@ const searchClosedUrl = computed(() => {
   margin-top: 0.5rem;
 }
 .label-btn--status {
-  border-color: #555;
-  color: #aaa;
+  border-color: $text-subtle;
+  color: $text-dim;
   font-size: 0.8rem;
   padding: 0.3rem 0.7rem;
 }
 .label-btn--util {
   display: inline-block;
-  border-color: #d97706;
-  color: #f59e0b;
+  border-color: $warn-amber-border;
+  color: $warn-amber;
   font-size: 0.82rem;
   padding: 0.4rem 0.8rem;
 }

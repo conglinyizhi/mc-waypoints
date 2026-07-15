@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import { createRouter, createWebHashHistory } from 'vue-router'
+import './styles/index.scss'
 
 // 懒加载路由
 const Waypoints = () => import('./views/Waypoints.vue')

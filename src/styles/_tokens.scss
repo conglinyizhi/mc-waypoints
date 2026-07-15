@@ -1,0 +1,82 @@
+// 设计令牌：颜色 / 圆角 / 间距 / 断点
+// 各组件通过 @use '../styles/tokens' as * 引用，避免硬编码重复
+
+// --- 背景 ---
+$bg-page: #1a1a2e;
+$bg-deep: #0a0a1e;
+$bg-panel: #12122a;
+$bg-panel-alt: #15152c;
+$bg-elevated: #1e1e3a;
+$bg-code: #1a1a30;
+$bg-input: #0e0e22;
+
+// --- 边框 ---
+$border: #2a2a4a;
+$border-strong: #3a3a5a;
+
+// --- 文本 ---
+$text: #e0e0e0;
+$text-bright: #fff;
+$text-muted: #ccc;
+$text-dim: #aaa;
+$text-soft: #999;
+$text-faint: #888;
+$text-hint: #777;
+$text-ghost: #666;
+$text-subtle: #555;
+$text-soft-plus: #bbb;
+
+// --- 强调色 ---
+$accent: #5fdc5f;
+$accent-bg: #1a3a1a;
+$accent-bg-hover: #2a4a2a;
+$gold: #ffd700;
+$danger: #f87171;
+$danger-bg: #2a1515;
+$danger-border: #5a3a3a;
+$danger-bg-strong: #3a1a1a;
+$danger-bg-soft: #2a1a1a;
+$danger-bg-deep: #4a2020;
+$warn: #fbbf24;
+$warn-border: #8a6a20;
+$warn-border-strong: #b0892a;
+$warn-bg: #1c170c;
+$warn-bg-strong: #2a2210;
+$warn-badge-bg: #3a2a10;
+$warn-amber: #f59e0b;
+$warn-amber-border: #d97706;
+$info: #60a5fa;
+$info-soft: #93c5fd;
+$info-bg: #0e1528;
+$info-bg-hover: #152238;
+$info-bg-alt: #1a2a3a;
+$info-bg-deep: #1c2f4a;
+$info-border: #3a4a6a;
+$link: #60a5fa;
+$panel-soft: #1c1c36;
+$coords-bg: #12121e;
+$gray-500: #6b7280;
+
+// --- 维度色 ---
+$dim-ow: #86efac;
+$dim-nether: #fca5a5;
+$dim-end: #d8b4fe;
+$dim-ow-badge-bg: #1a3a1a;
+$dim-nether-badge-bg: #3a1a1a;
+$dim-end-badge-bg: #2a1a3a;
+$dim-nether-badge: #f87171;
+$dim-end-badge: #c084fc;
+
+// --- 形状 ---
+$radius-sm: 3px;
+$radius: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+$radius-xl: 10px;
+
+// --- 字体 ---
+$font-mono: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+
+// --- 断点 ---
+$bp-xs: 480px;
+$bp-sm: 720px;

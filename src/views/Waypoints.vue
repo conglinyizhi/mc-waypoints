@@ -277,7 +277,10 @@ function onMenuReport(wp) {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use '../styles/tokens' as *;
+@use '../styles/mixins' as *;
+@use '../styles/shared' as shared;
 /* ===== 工具栏 ===== */
 .toolbar {
   display: flex;
@@ -291,28 +294,17 @@ function onMenuReport(wp) {
   flex: 1 1 200px;
   min-width: 180px;
   padding: 0.45rem 0.75rem;
-  border: 1px solid #3a3a5a;
-  border-radius: 6px;
-  background: #12122a;
-  color: #e0e0e0;
+  border: 1px solid $border-strong;
+  border-radius: $radius-md;
+  background: $bg-panel;
+  color: $text;
   font-size: 0.9rem;
   outline: none;
-}
-.search-input:focus { border-color: #5fdc5f; }
 
-.filter-group { display: flex; gap: 0.3rem; flex-wrap: wrap; }
-.filter-btn {
-  padding: 0.3rem 0.65rem;
-  border: 1px solid #3a3a5a;
-  border-radius: 4px;
-  background: #12122a;
-  color: #999;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: background .15s, border-color .15s;
+  &:focus { border-color: $accent; }
 }
-.filter-btn:hover { border-color: #5fdc5f; color: #ccc; }
-.filter-btn--active { background: #1a3a1a; border-color: #5fdc5f; color: #5fdc5f; }
+
+@include shared.filter-btn-block;
 
 /* ===== 表格 ===== */
 .table-wrap { overflow-x: auto; }
@@ -320,19 +312,19 @@ function onMenuReport(wp) {
 .waypoint-table th {
   text-align: left;
   padding: 0.55rem 0.6rem;
-  border-bottom: 2px solid #2a2a4a;
-  color: #aaa;
+  border-bottom: 2px solid $border;
+  color: $text-dim;
   font-weight: 600;
   white-space: nowrap;
 }
 .waypoint-table td {
   padding: 0.5rem 0.6rem;
-  border-bottom: 1px solid #1e1e3a;
+  border-bottom: 1px solid $bg-elevated;
   white-space: nowrap;
 }
-.waypoint-table tbody tr:hover { background: #1e1e3a; }
+.waypoint-table tbody tr:hover { background: $bg-elevated; }
 
-.col-name { font-weight: 600; color: #fff; }
+.col-name { font-weight: 600; color: $text-bright; }
 .name-with-dim {
   display: inline-flex;
   align-items: center;
@@ -341,10 +333,10 @@ function onMenuReport(wp) {
 }
 .dim-dot { flex-shrink: 0; font-size: 0.85em; line-height: 1; }
 .col-coords code {
-  font-family: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+  font-family: $font-mono;
   font-size: 0.82rem;
-  color: #ffd700;
-  background: #12121e;
+  color: $gold;
+  background: $coords-bg;
   padding: 0.1rem 0.35rem;
   border-radius: 3px;
 }
@@ -353,9 +345,9 @@ function onMenuReport(wp) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #999;
+  color: $text-soft;
 }
-.col-contributor { color: #888; }
+.col-contributor { color: $text-faint; }
 .col-actions {
   position: relative;
   display: flex;
@@ -391,8 +383,8 @@ function onMenuReport(wp) {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  background: #16162c;
-  border: 1px solid #3a3a5a;
+  background: $bg-panel-alt;
+  border: 1px solid $border-strong;
   border-radius: 8px;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
@@ -412,28 +404,25 @@ function onMenuReport(wp) {
 }
 
 /* ===== 维度着色（名称前缀） ===== */
-.name-with-dim.dim-ow { color: #86efac; }
-.name-with-dim.dim-nether { color: #fca5a5; }
-.name-with-dim.dim-end { color: #d8b4fe; }
+.name-with-dim.dim-ow { color: $dim-ow; }
+.name-with-dim.dim-nether { color: $dim-nether; }
+.name-with-dim.dim-end { color: $dim-end; }
 
 
-/* ===== 复制按钮 ===== */
-.copy-btn {
-  padding: 0.25rem 0.5rem;
-  border: 1px solid #3a3a5a;
-  border-radius: 4px;
-  background: #12122a;
-  color: #aaa;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: all .15s;
-  min-width: 2.3em;
+/* ===== 操作按钮 ===== */
+@include shared.copy-btn-block;
+
+.report-btn {
+  color: $warn;
+  min-width: auto;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    border-color: $warn;
+    color: $warn;
+    background: $warn-bg-strong;
+  }
 }
-.copy-btn:hover { border-color: #5fdc5f; color: #5fdc5f; }
-.copy-btn--ok { border-color: #5fdc5f; color: #5fdc5f; background: #1a3a1a; }
-.copy-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-.report-btn { color: #fbbf24; min-width: auto; white-space: nowrap; }
-.report-btn:hover:not(:disabled) { border-color: #fbbf24; color: #fbbf24; background: #2a2210; }
 
 /* ===== 底部 ===== */
 .footer-bar {
@@ -446,19 +435,19 @@ function onMenuReport(wp) {
 .submit-link {
   display: inline-block;
   padding: 0.5rem 1rem;
-  border: 1px dashed #3a3a5a;
+  border: 1px dashed $border-strong;
   border-radius: 6px;
-  color: #5fdc5f;
+  color: $accent;
   font-size: 0.85rem;
   transition: background .15s;
 }
-.submit-link:hover { background: #1a3a1a; }
+.submit-link:hover { background: $accent-bg; }
 .submit-link--primary {
   border-style: solid;
-  border-color: #5fdc5f;
-  background: #1a3a1a;
-  color: #5fdc5f;
+  border-color: $accent;
+  background: $accent-bg;
+  color: $accent;
   font-weight: 600;
 }
-.submit-link--primary:hover { background: #2a4a2a; }
+.submit-link--primary:hover { background: $accent-bg-hover; }
 </style>

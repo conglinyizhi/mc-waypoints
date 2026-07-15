@@ -1,0 +1,135 @@
+@use 'tokens' as *;
+
+// 深色输入框
+@mixin input-dark {
+  border: 1px solid $border-strong;
+  border-radius: $radius-md;
+  background: $bg-deep;
+  color: $text;
+  outline: none;
+
+  &:focus {
+    border-color: $accent;
+  }
+}
+
+// 面板卡片
+@mixin panel-card {
+  background: $bg-panel;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+}
+
+// 等宽代码块
+@mixin mono-code {
+  font-family: $font-mono;
+  font-size: 0.82rem;
+  color: $gold;
+  background: $bg-code;
+  padding: 0.1rem 0.35rem;
+  border-radius: $radius-sm;
+}
+
+// 窄屏
+@mixin mq-xs {
+  @media (max-width: $bp-xs) {
+    @content;
+  }
+}
+
+@mixin mq-sm {
+  @media (max-width: $bp-sm) {
+    @content;
+  }
+}
+
+// 通用小按钮（复制 / 筛选 / 操作）
+@mixin btn-chip {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid $border-strong;
+  border-radius: $radius;
+  background: $bg-panel;
+  color: $text-dim;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: $accent;
+    color: $accent;
+  }
+
+  &--ok,
+  &.copy-btn--ok {
+    border-color: $accent;
+    color: $accent;
+    background: $accent-bg;
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+// 主操作按钮
+@mixin btn-primary {
+  padding: 0.7rem 1rem;
+  border: 1px solid $accent;
+  border-radius: $radius-md;
+  background: $accent-bg;
+  color: $accent;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) {
+    background: $accent-bg-hover;
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+// 幽灵按钮
+@mixin btn-ghost {
+  padding: 0.55rem 0.95rem;
+  border: 1px solid $border-strong;
+  border-radius: $radius-md;
+  background: transparent;
+  color: $text-dim;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: $text-muted;
+    color: $text-muted;
+  }
+}
+
+// 危险按钮
+@mixin btn-danger {
+  padding: 0.7rem 0.95rem;
+  border: 1px solid $danger-border;
+  border-radius: $radius-md;
+  background: $danger-bg;
+  color: $danger;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: $danger-bg-strong;
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
