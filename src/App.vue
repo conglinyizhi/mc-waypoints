@@ -194,13 +194,13 @@ html[data-theme='dark'] .github-favicon {
 }
 
 .theme-toggle {
-  /* 三态均为 4 字：深色模式 / 浅色模式 / 跟随系统 — 等宽且贴字，避免右侧虚空 */
-  width: 6rem;
-  min-width: 6rem;
+  /* 宽度随文案由浏览器计算；三态均为 4 字，切换时几乎不抖 */
+  width: auto;
+  min-width: 0;
   justify-content: flex-start;
   gap: 0.22rem;
-  padding-left: 0.35rem;
-  padding-right: 0.35rem;
+  padding-left: 0.4rem;
+  padding-right: 0.5rem;
   box-sizing: border-box;
 }
 
@@ -215,12 +215,8 @@ html[data-theme='dark'] .github-favicon {
 .theme-toggle .theme-label {
   color: $text-soft;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: clip;
   flex: 0 0 auto;
-  min-width: 0;
   text-align: left;
-  letter-spacing: 0;
 }
 
 .app-header {
@@ -301,7 +297,7 @@ html[data-theme='dark'] .github-favicon {
   }
 
   .theme-toggle {
-    width: 2rem;
+    width: auto;
     min-width: 2rem;
     justify-content: center;
     padding-left: 0.28rem;
