@@ -87,29 +87,30 @@
 import { computed, provide, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDataFetch } from './composables/useDataFetch.js'
+import { useHomeView } from './composables/useHomeView.js'
 import { useTheme } from './composables/useTheme.js'
 
 const route = useRoute()
+const { homePath } = useHomeView()
 
 /**
  * 导航精简：
- * - 首页：坐标表 / 卡片列表
- * - 参与：提交坐标 + 待办（名称可再改）
- * - 小工具：公告 + 下界换算
- * - 关于
+ * - 首页：按 localStorage 指向表格 / 或卡片列表
+ * - 参与 / 小工具 / 关于
  */
-const tabs = [
-  { to: '/', label: '🏠 首页', match: ['waypoints', 'waypoints-mobile', 'report'] },
+const tabs = computed(() => [
+  { to: homePath.value, label: '🏠 首页', match: ['waypoints', 'waypoints-mobile', 'report'] },
   { to: '/contribute', label: '✍️ 参与', match: ['contribute'] },
   { to: '/tools', label: '🧰 小工具', match: ['tools'] },
   { to: '/about', label: 'ℹ️ 关于', match: ['about'] }
-]
+])
 
 function isTabActive(tab) {
   const name = route.name
   if (tab.match?.includes(name)) return true
-  // 兼容仅 path 匹配
-  if (tab.to === '/' && (route.path === '/' || route.path === '/m' || route.path.startsWith('/report'))) return true
+  if (route.path === '/' || route.path === '/m' || route.path.startsWith('/report')) {
+    return tab.match?.includes('waypoints')
+  }
   return false
 }
 

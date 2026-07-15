@@ -55,17 +55,39 @@
 
     </div>
 
-    <!-- 窄屏/手机：引导进入卡片列表（不自动跳转，由用户点选） -->
+    <!-- 窄屏/手机：引导切换首页视图（写入 localStorage，可由关于页再改） -->
     <div class="mobile-view-banner" data-name="mobile-view-banner">
       <div class="mobile-view-banner__text">
         <strong>屏幕较窄？</strong>
-        <span>表格可能显示不全，可改用专为手机设计的卡片列表。</span>
+        <span>表格可能显示不全，可改用手机卡片首页。</span>
       </div>
-      <router-link
-        to="/m"
+      <button
+        type="button"
         data-name="open-mobile-list-btn"
         class="mobile-view-banner__btn"
-      >📱 卡片列表</router-link>
+        @click="showHomeViewDialog = true"
+      >📱 卡片列表</button>
+    </div>
+
+    <!-- 切换首页视图 · 拟态确认 -->
+    <div
+      v-if="showHomeViewDialog"
+      class="modal-overlay"
+      data-name="home-view-switch-dialog"
+      @click.self="showHomeViewDialog = false"
+      @keydown.esc="showHomeViewDialog = false"
+    >
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="home-view-dialog-title">
+        <h3 id="home-view-dialog-title" class="modal-title">切换到手机卡片首页？</h3>
+        <p class="modal-body">
+          确认后，「首页」将默认打开卡片列表，并记住你的选择。
+          之后可在 <strong>关于</strong> 页随时改回电脑表格视图。
+        </p>
+        <div class="modal-actions">
+          <button type="button" data-name="home-view-cancel" class="btn-ghost" @click="showHomeViewDialog = false">取消</button>
+          <button type="button" data-name="home-view-confirm" class="btn-primary" @click="confirmSwitchToMobile">切换并记住</button>
+        </div>
+      </div>
     </div>
 
     <!-- 表格区域 -->
@@ -205,14 +227,27 @@
 </template>
 
 <script setup>
-import { ref, computed, inject, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, inject, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useClipboard } from '../composables/useClipboard.js'
+import { useHomeView } from '../composables/useHomeView.js'
 
 const waypoints = inject('waypoints')
 const config = inject('config')
 const router = useRouter()
 const { copy, copiedId } = useClipboard()
+const { setHomeView } = useHomeView()
+const showHomeViewDialog = ref(false)
+
+function confirmSwitchToMobile() {
+  setHomeView('mobile')
+  showHomeViewDialog.value = false
+  router.push({ name: 'waypoints-mobile' })
+}
+
+watch(showHomeViewDialog, (open) => {
+  document.body.style.overflow = open ? 'hidden' : ''
+})
 
 // 窄屏操作菜单：同一时间只开一行；Teleport + fixed，避免 overflow 裁切 / mouseleave 误关
 const openMenuId = ref(null)
@@ -768,9 +803,11 @@ th.col-note { color: $text-dim; }
   border-radius: $radius-md;
   background: $info-bg-deep;
   color: $info-soft;
+  font: inherit;
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
+  cursor: pointer;
   transition: background 0.15s;
 
   &:hover { background: $info-bg-hover; }
@@ -788,6 +825,55 @@ th.col-note { color: $text-dim; }
   .mobile-view-banner {
     display: flex;
   }
+}
+
+
+/* 拟态对话框（首页视图切换） */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+.modal-card {
+  background: $bg-panel-alt;
+  border: 1px solid $border-strong;
+  border-radius: $radius-xl;
+  padding: 1.25rem 1.35rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+.modal-title {
+  color: $text-bright;
+  font-size: 1.05rem;
+  margin-bottom: 0.7rem;
+}
+.modal-body {
+  color: $text-dim;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin-bottom: 1.1rem;
+
+  strong { color: $accent; }
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.btn-ghost {
+  @include btn-ghost;
+}
+.btn-primary {
+  @include btn-primary;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.88rem;
 }
 
 /* ===== 底部 ===== */

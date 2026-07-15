@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import './styles/index.scss'
+import { useHomeView } from './composables/useHomeView.js'
 
 // 懒加载路由
 const Waypoints = () => import('./views/Waypoints.vue')
@@ -33,6 +34,25 @@ if (import.meta.env.DEV) {
 const router = createRouter({
   history: createWebHashHistory(),
   routes
+})
+
+const { preference } = useHomeView()
+
+/**
+ * 首页视图：localStorage 偏好 + 守卫
+ * - 偏好 mobile：访问 / → /m
+ * - 偏好 desktop：访问 /m → /
+ * 关于页可随时改偏好；详情 /report 不拦截
+ */
+router.beforeEach((to) => {
+  const mode = preference.value
+  if (mode === 'mobile' && to.name === 'waypoints') {
+    return { name: 'waypoints-mobile', replace: true }
+  }
+  if (mode === 'desktop' && to.name === 'waypoints-mobile') {
+    return { name: 'waypoints', replace: true }
+  }
+  return true
 })
 
 const app = createApp(App)

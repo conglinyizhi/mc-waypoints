@@ -1,7 +1,7 @@
 <template>
   <div class="m-page" data-name="waypoints-mobile-page">
     <div class="m-head">
-      <router-link to="/" data-name="m-back-desktop" class="m-back">← 桌面表格</router-link>
+      <button type="button" data-name="m-back-desktop" class="m-back" @click="switchToDesktop">← 桌面表格</button>
       <h1 class="m-title">坐标列表 · 卡片</h1>
       <p class="m-sub">适合窄屏：一卡一条，无需左右滑动</p>
     </div>
@@ -16,16 +16,16 @@
         placeholder="搜索名称、备注…"
       />
       <div class="m-filters" role="group" aria-label="维度筛选">
-        <label
+        <button
           v-for="d in dimOptions"
           :key="d.value"
+          type="button"
           :data-name="`m-dim-${d.value}`"
           class="m-filter"
           :class="{ 'm-filter--on': selectedDims.includes(d.value) }"
-        >
-          <input v-model="selectedDims" type="checkbox" :value="d.value" />
-          <span>{{ d.label }}</span>
-        </label>
+          :aria-pressed="selectedDims.includes(d.value)"
+          @click="toggleDim(d.value)"
+        >{{ d.label }}</button>
       </div>
     </div>
 
@@ -97,10 +97,12 @@
 import { computed, inject, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useClipboard } from '../composables/useClipboard.js'
+import { useHomeView } from '../composables/useHomeView.js'
 
 const waypoints = inject('waypoints')
 const router = useRouter()
 const { copy, copiedId } = useClipboard()
+const { setHomeView } = useHomeView()
 
 const searchText = ref('')
 const ALL_DIMS = ['overworld', 'nether', 'end']
@@ -115,6 +117,13 @@ const selectedDims = ref([...ALL_DIMS])
 const dimAllSelected = computed(() =>
   ALL_DIMS.every(d => selectedDims.value.includes(d)) && selectedDims.value.length > 0
 )
+
+function toggleDim(value) {
+  const set = new Set(selectedDims.value)
+  if (set.has(value)) set.delete(value)
+  else set.add(value)
+  selectedDims.value = ALL_DIMS.filter(d => set.has(d))
+}
 
 const filtered = computed(() => {
   let list = waypoints.value || []
@@ -159,6 +168,11 @@ async function doCopy(text, id) {
   await copy(text, id)
 }
 
+function switchToDesktop() {
+  setHomeView('desktop')
+  router.push({ name: 'waypoints' })
+}
+
 function openDetail(wp) {
   if (!wp?.id) return
   router.push({ name: 'report', query: { id: wp.id } })
@@ -180,12 +194,19 @@ function openDetail(wp) {
 
 .m-back {
   display: inline-block;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
   font-size: 0.82rem;
   color: $text-faint;
   margin-bottom: 0.35rem;
+  cursor: pointer;
+  text-align: left;
 
   &:hover { color: $accent; }
 }
+
 
 .m-title {
   margin: 0;
@@ -235,16 +256,11 @@ function openDetail(wp) {
   border-radius: 999px;
   background: $bg-panel;
   color: $text-dim;
+  font: inherit;
   font-size: 0.8rem;
   cursor: pointer;
   user-select: none;
-
-  input {
-    width: 0.9rem;
-    height: 0.9rem;
-    accent-color: $accent;
-  }
-
+  /* 无 checkbox：选中态靠颜色暗示 */
   &--on {
     border-color: $accent;
     color: $accent;
@@ -252,6 +268,8 @@ function openDetail(wp) {
     font-weight: 600;
   }
 }
+
+
 
 .m-count {
   margin: 0 0 0.55rem;

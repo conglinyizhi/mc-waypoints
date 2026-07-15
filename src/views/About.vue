@@ -43,6 +43,22 @@
       </div>
     </div>
 
+    <div class="about-card" data-name="home-view-card">
+      <h2>📱 首页视图</h2>
+      <p class="hint">
+        当前：<strong class="hl">{{ homeViewLabel }}</strong>。
+        「首页」会按此偏好打开电脑表格或手机卡片；可随时切换。
+      </p>
+      <button
+        type="button"
+        data-name="toggle-home-view-btn"
+        class="label-btn label-btn--util home-view-btn"
+        @click="onToggleHomeView"
+      >
+        {{ isMobileHome ? '🖥️ 切换为电脑表格首页' : '📱 切换为手机卡片首页' }}
+      </button>
+    </div>
+
     <div v-if="repo" class="about-card">
       <h2>🛑 CI 控制</h2>
       <p class="hint">CI_DISABLED=true → 全部停摆；false → 正常运行</p>
@@ -55,11 +71,25 @@
 
 <script setup>
 import { computed, inject } from 'vue'
+import { useRouter } from 'vue-router'
+import { useHomeView } from '../composables/useHomeView.js'
 
 // 编译时注入的 git hash
 const gitHash = __GIT_HASH__
 
 const config = inject('config')
+const router = useRouter()
+const { isMobileHome, homeViewLabel, setHomeView, homeRouteName } = useHomeView()
+
+function onToggleHomeView() {
+  const next = isMobileHome.value ? 'desktop' : 'mobile'
+  setHomeView(next)
+  // 若当前在首页相关页，立刻落到对应视图
+  const n = router.currentRoute.value.name
+  if (n === 'waypoints' || n === 'waypoints-mobile') {
+    router.replace({ name: homeRouteName.value })
+  }
+}
 const repo = computed(() => {
   const r = config.value.github_repo
   return r && r !== 'yourname/yourrepo' ? `https://github.com/${r}` : null
