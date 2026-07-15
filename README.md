@@ -135,6 +135,22 @@ pnpm build      # 构建 → dist/
 
 本地开发时 Vite 中间件提供 JSONL CRUD API，`#/manage` 页面可增删改测试数据。
 
+### 样式（SCSS）
+
+- 全局入口：`src/styles/index.scss`
+- 设计令牌：`src/styles/_tokens.scss`（颜色 / 圆角 / 断点）
+- 混入：`src/styles/_mixins.scss`、复用块：`src/styles/_shared.scss`
+- 组件内：`<style scoped lang="scss">` + `@use '../styles/tokens' as *;`
+
+```scss
+// 示例：新组件里复用主题色与按钮
+@use '../styles/tokens' as *;
+@use '../styles/shared' as shared;
+
+.panel { background: $bg-panel; border: 1px solid $border; }
+@include shared.copy-btn-block;
+```
+
 ## 打版本
 
 ```bash
@@ -146,7 +162,7 @@ git push --tags
 
 ## 技术栈
 
-Vue 3 · Vite · vue-router (hash mode) · GitHub Actions · GitHub Pages
+Vue 3 · Vite · vue-router (hash mode) · SCSS (sass) · pnpm · GitHub Actions · GitHub Pages
 
 ## 协议
 
