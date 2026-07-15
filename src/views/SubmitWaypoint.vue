@@ -390,17 +390,22 @@ function smartParseText(text) {
   let note = ''
   let coords = null
 
-  // 维度词摘取策略（避免「末地船」被切碎）：
+  // 维度词摘取策略（避免「末地船」「末地传送门」被误判）：
   // 1) 独立词：两侧为边界（空白/标点/串端）→ 记维度并从文本中移除
   // 2) 紧贴坐标：如「地狱X90」「下界X90 Y…」→ 记维度并移除维度词
   // 3) 名称前缀：串首「下界要塞」「主世界基地」等（维度词+常见后缀）→ 记维度但保留全名
   // 4) 不匹配无边界粘连（「末地船」只当名称）
+  // 5) 门类专名：末地传送门/下界传送门 不据此推断维度
+  //    （末地门建在主世界；下界门主世界与下界皆有）
   const dimTokenRe = [
     { re: /(主\s*世界|overworld)/i, dim: 'overworld' },
     { re: /(下\s*界|地\s*狱|nether)/i, dim: 'nether' },
     { re: /(末\s*地|the\s*end|\bend\b)/i, dim: 'end' }
   ]
-  const placeSuffix = /^(要塞|门|传送门|门户|基地|家|城|村|塔|矿|洞|港|站|点|农场|交易所|刷怪|刷铁|仓库|中枢|枢纽)/
+  // 不含「门/传送门」：末地传送门≠末地，下界传送门也不等于一定在下界
+  const placeSuffix = /^(要塞|基地|家|城|村|塔|矿|洞|港|站|点|农场|交易所|刷怪|刷铁|仓库|中枢|枢纽)/
+  // 维度词后接门类专名时跳过（整词当名称的一部分）
+  const portalLike = /^(传送门|门户|门)/
   // 维度后紧跟坐标轴：地狱X90 / netherX:1 / 下界 x 2
   const isCoordLead = (s) => /^[xXyYzZ]\s*[:=：]?\s*-?\d/.test(s)
   const isBoundary = (ch) => !ch || /[\s,，、:：;；|｜\-_/（）()【】\[\]]/.test(ch)
@@ -412,6 +417,9 @@ function smartParseText(text) {
     const before = start === 0 ? '' : work[start - 1]
     const after = end >= work.length ? '' : work[end]
     const rest = work.slice(end)
+    // 「末地传送门」「下界 门」等：维度词与门粘连/紧邻 → 不记维度
+    if (!isBoundary(after) && portalLike.test(rest)) continue
+    if (isBoundary(before) && isBoundary(after) && portalLike.test(rest.replace(/^\s+/, ''))) continue
     const gluedToCoords = isBoundary(before) && isCoordLead(rest)
     const independent = isBoundary(before) && isBoundary(after)
     const namePrefix = start === 0 && !isBoundary(after) && !isCoordLead(rest) && placeSuffix.test(rest)
